@@ -20,13 +20,21 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Show Flutter Version
+        run: flutter --version
+
+      # Generate a fresh modern Android project.
+      # This replaces the deleted/old Android configuration.
+      - name: Generate Android Project
+        run: flutter create --platforms=android --project-name islamic_book_app .
+
       - name: Flutter Pub Get
         run: flutter pub get
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Build APK
+      - name: Build Release APK
         run: flutter build apk --release
 
       - name: Upload APK
