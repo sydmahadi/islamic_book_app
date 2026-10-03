@@ -9,66 +9,150 @@ class CalculatorScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('ক্যালকুলেটর'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _button(
-              context,
-              icon: Icons.calculate,
-              title: 'Normal Calculator',
-              subtitle: 'সাধারণ হিসাব',
-              page: const NormalCalculatorPage(),
-            ),
-
-            const SizedBox(height: 16),
-
-            _button(
-              context,
-              icon: Icons.access_time,
-              title: 'Time Calculator',
-              subtitle: 'ঘণ্টা ও মিনিটের হিসাব',
-              page: const TimeCalculatorPage(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _button(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Widget page,
-  }) {
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(18),
-        leading: CircleAvatar(
-          child: Icon(icon),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
+        children: [
+          _CalculatorChoiceCard(
+            icon: Icons.calculate_rounded,
+            title: 'Normal Calculator',
+            subtitle: 'সাধারণ যোগ, বিয়োগ, গুণ ও ভাগ',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NormalCalculatorPage(),
+                ),
+              );
+            },
           ),
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => page,
-            ),
-          );
-        },
+          const SizedBox(height: 14),
+          _CalculatorChoiceCard(
+            icon: Icons.access_time_rounded,
+            title: 'Time Calculator',
+            subtitle: '১.২০ = ১ ঘণ্টা ২০ মিনিট',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TimeCalculatorPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
+
+class _CalculatorChoiceCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _CalculatorChoiceCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [
+                  Color(0xFF176B45),
+                  Color(0xFF0F5132),
+                ]
+              : const [
+                  Color(0xFF176B45),
+                  Color(0xFF0F5132),
+                ],
+        ),
+        border: Border.all(
+          color: const Color(0x55C9A45C),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: dark ? 0.20 : 0.08,
+            ),
+            blurRadius: 15,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC9A45C),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFF18352A),
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xD9FFFFFF),
+                        fontSize: 12.5,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Color(0xFFE3C875),
+                size: 17,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// NORMAL CALCULATOR
+// ============================================================
 
 class NormalCalculatorPage extends StatefulWidget {
   const NormalCalculatorPage({super.key});
@@ -78,83 +162,245 @@ class NormalCalculatorPage extends StatefulWidget {
       _NormalCalculatorPageState();
 }
 
-class _NormalCalculatorPageState
-    extends State<NormalCalculatorPage> {
-  String display = '0';
-  double? firstNumber;
-  String? operation;
-  bool clearNext = false;
+class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
+  String _expression = '';
+  String _result = '0';
 
-  void press(String value) {
+  final ScrollController _expressionScrollController =
+      ScrollController();
+
+  final List<String> _history = [];
+
+  void _add(String value) {
     setState(() {
       if (value == 'C') {
-        display = '0';
-        firstNumber = null;
-        operation = null;
-        clearNext = false;
+        _expression = '';
+        _result = '0';
         return;
       }
 
-      if (value == '+' ||
-          value == '-' ||
-          value == '×' ||
-          value == '÷') {
-        firstNumber = double.tryParse(display);
-        operation = value;
-        clearNext = true;
+      if (value == '⌫') {
+        if (_expression.isNotEmpty) {
+          _expression =
+              _expression.substring(0, _expression.length - 1);
+        }
+        _calculatePreview();
         return;
       }
 
       if (value == '=') {
-        if (firstNumber == null || operation == null) {
-          return;
-        }
-
-        final second = double.tryParse(display) ?? 0;
-
-        double result = 0;
-
-        switch (operation) {
-          case '+':
-            result = firstNumber! + second;
-            break;
-          case '-':
-            result = firstNumber! - second;
-            break;
-          case '×':
-            result = firstNumber! * second;
-            break;
-          case '÷':
-            if (second == 0) {
-              display = 'Error';
-              return;
-            }
-            result = firstNumber! / second;
-            break;
-        }
-
-        display = result
-            .toStringAsFixed(10)
-            .replaceFirst(RegExp(r'\.?0+$'), '');
-
-        firstNumber = null;
-        operation = null;
-        clearNext = true;
-
+        _calculateFinal();
         return;
       }
 
-      if (clearNext) {
-        display = value;
-        clearNext = false;
-      } else {
-        if (display == '0') {
-          display = value;
+      if (_isOperator(value)) {
+        if (_expression.isEmpty) {
+          if (value == '-') {
+            _expression = '-';
+          }
         } else {
-          display += value;
+          final last = _expression[_expression.length - 1];
+
+          if (_isOperator(last)) {
+            _expression =
+                _expression.substring(0, _expression.length - 1) +
+                    value;
+          } else {
+            _expression += value;
+          }
+        }
+      } else if (value == '.') {
+        final currentNumber = _currentNumber();
+
+        if (!currentNumber.contains('.')) {
+          if (_expression.isEmpty ||
+              _isOperator(_expression[_expression.length - 1])) {
+            _expression += '0.';
+          } else {
+            _expression += '.';
+          }
+        }
+      } else {
+        _expression += value;
+      }
+
+      _calculatePreview();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_expressionScrollController.hasClients) {
+          _expressionScrollController.jumpTo(
+            _expressionScrollController.position.maxScrollExtent,
+          );
+        }
+      });
+    });
+  }
+
+  String _currentNumber() {
+    if (_expression.isEmpty) return '';
+
+    int index = _expression.length - 1;
+
+    while (index >= 0 && !_isOperator(_expression[index])) {
+      index--;
+    }
+
+    return _expression.substring(index + 1);
+  }
+
+  bool _isOperator(String value) {
+    return value == '+' ||
+        value == '-' ||
+        value == '×' ||
+        value == '÷';
+  }
+
+  List<String> _tokens(String expression) {
+    final result = <String>[];
+    String number = '';
+
+    for (int i = 0; i < expression.length; i++) {
+      final char = expression[i];
+
+      if (_isOperator(char)) {
+        if (number.isNotEmpty) {
+          result.add(number);
+          number = '';
+        }
+
+        result.add(char);
+      } else {
+        number += char;
+      }
+    }
+
+    if (number.isNotEmpty) {
+      result.add(number);
+    }
+
+    return result;
+  }
+
+  double? _evaluate(String expression) {
+    if (expression.isEmpty) return null;
+
+    final tokens = _tokens(expression);
+
+    if (tokens.isEmpty) return null;
+
+    if (_isOperator(tokens.last)) {
+      tokens.removeLast();
+    }
+
+    if (tokens.isEmpty) return null;
+
+    try {
+      final numbers = <double>[];
+      final operators = <String>[];
+
+      for (final token in tokens) {
+        if (_isOperator(token)) {
+          operators.add(token);
+        } else {
+          numbers.add(double.parse(token));
         }
       }
+
+      if (numbers.isEmpty) return null;
+
+      for (int i = 0; i < operators.length;) {
+        if (operators[i] == '×' || operators[i] == '÷') {
+          final left = numbers[i];
+          final right = numbers[i + 1];
+
+          double value;
+
+          if (operators[i] == '×') {
+            value = left * right;
+          } else {
+            if (right == 0) return null;
+            value = left / right;
+          }
+
+          numbers[i] = value;
+          numbers.removeAt(i + 1);
+          operators.removeAt(i);
+        } else {
+          i++;
+        }
+      }
+
+      double result = numbers[0];
+
+      for (int i = 0; i < operators.length; i++) {
+        if (operators[i] == '+') {
+          result += numbers[i + 1];
+        } else if (operators[i] == '-') {
+          result -= numbers[i + 1];
+        }
+      }
+
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatNumber(double value) {
+    if (value.isNaN || value.isInfinite) {
+      return 'Error';
+    }
+
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    final text = value.toStringAsFixed(10);
+
+    return text
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  void _calculatePreview() {
+    final value = _evaluate(_expression);
+
+    if (value != null) {
+      _result = _formatNumber(value);
+    } else {
+      _result = '0';
+    }
+  }
+
+  void _calculateFinal() {
+    final value = _evaluate(_expression);
+
+    if (value == null) {
+      return;
+    }
+
+    final formatted = _formatNumber(value);
+
+    if (_expression.isNotEmpty) {
+      _history.insert(
+        0,
+        '$_expression = $formatted',
+      );
+
+      if (_history.length > 30) {
+        _history.removeLast();
+      }
+    }
+
+    setState(() {
+      _result = formatted;
     });
+  }
+
+  @override
+  void dispose() {
+    _expressionScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -162,53 +408,112 @@ class _NormalCalculatorPageState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Normal Calculator'),
+        actions: [
+          if (_history.isNotEmpty)
+            IconButton(
+              tooltip: 'History',
+              onPressed: _showHistory,
+              icon: const Icon(
+                Icons.history_rounded,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
+        ],
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: _display(),
+            ),
+            _keypad(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _display() {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: dark
+            ? const Color(0xFF10291F)
+            : const Color(0xFFFFFCF5),
+        border: Border.all(
+          color: const Color(0x44C9A45C),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Expanded(
-            child: Container(
-              alignment: Alignment.bottomRight,
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                display,
-                style: const TextStyle(
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
-                ),
+          SingleChildScrollView(
+            controller: _expressionScrollController,
+            scrollDirection: Axis.horizontal,
+            reverse: false,
+            child: Text(
+              _expression.isEmpty ? '0' : _expression,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.color
+                    ?.withValues(alpha: 0.65),
               ),
             ),
           ),
-          _calculatorButtons(),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              _result,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _calculatorButtons() {
-    const buttons = [
-      ['7', '8', '9', '÷'],
-      ['4', '5', '6', '×'],
-      ['1', '2', '3', '-'],
-      ['0', '.', '=', '+'],
-      ['C'],
+  Widget _keypad() {
+    final buttons = [
+      ['C', '⌫', '÷', '×'],
+      ['7', '8', '9', '-'],
+      ['4', '5', '6', '+'],
+      ['1', '2', '3', '='],
+      ['0', '.', '', ''],
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Column(
         children: buttons.map((row) {
           return Row(
-            children: row.map((button) {
+            children: row.map((value) {
+              if (value.isEmpty) {
+                return const Expanded(
+                  child: SizedBox(height: 64),
+                );
+              }
+
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: ElevatedButton(
-                    onPressed: () => press(button),
-                    child: Text(
-                      button,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
+                  child: _button(value),
                 ),
               );
             }).toList(),
@@ -217,7 +522,101 @@ class _NormalCalculatorPageState
       ),
     );
   }
+
+  Widget _button(String value) {
+    final operator = _isOperator(value);
+    final action = value == 'C' ||
+        value == '⌫' ||
+        value == '=';
+
+    return SizedBox(
+      height: 62,
+      child: ElevatedButton(
+        onPressed: () => _add(value),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: value == '='
+              ? const Color(0xFFC9A45C)
+              : operator
+                  ? const Color(0xFF176B45)
+                  : action
+                      ? const Color(0xFF294D3E)
+                      : Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF10291F)
+                          : const Color(0xFFFFFCF5),
+          foregroundColor: value == '='
+              ? const Color(0xFF18352A)
+              : Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(17),
+            side: BorderSide(
+              color: const Color(0x33C9A45C),
+            ),
+          ),
+          padding: EdgeInsets.zero,
+        ),
+        child: Text(
+          value,
+          style: TextStyle(
+            fontSize: value == '⌫' ? 23 : 21,
+            fontWeight: FontWeight.w800,
+            color: value == '='
+                ? const Color(0xFF18352A)
+                : (!operator && !action)
+                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showHistory() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Calculation History',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _history.length,
+                    itemBuilder: (_, index) {
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.history_rounded,
+                          color: Color(0xFFC9A45C),
+                        ),
+                        title: Text(_history[index]),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
+
+// ============================================================
+// TIME CALCULATOR
+// ============================================================
 
 class TimeCalculatorPage extends StatefulWidget {
   const TimeCalculatorPage({super.key});
@@ -227,237 +626,300 @@ class TimeCalculatorPage extends StatefulWidget {
       _TimeCalculatorPageState();
 }
 
-class _TimeCalculatorPageState
-    extends State<TimeCalculatorPage> {
-  String display = '0.00';
-  int? firstMinutes;
-  String? operation;
-  bool clearNext = false;
+class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
+  String _expression = '';
+  int _resultMinutes = 0;
 
-  int parseTime(String value) {
-    if (!value.contains('.')) {
-      return int.tryParse(value) ?? 0;
-    }
+  final ScrollController _expressionScrollController =
+      ScrollController();
 
-    final parts = value.split('.');
+  final List<String> _history = [];
 
-    final hours = int.tryParse(parts[0]) ?? 0;
-    final minutes = int.tryParse(parts[1]) ?? 0;
+  void _add(String value) {
+    setState(() {
+      if (value == 'C') {
+        _expression = '';
+        _resultMinutes = 0;
+        return;
+      }
 
-    return hours * 60 + minutes;
+      if (value == '⌫') {
+        if (_expression.isNotEmpty) {
+          _expression =
+              _expression.substring(0, _expression.length - 1);
+        }
+        _calculatePreview();
+        return;
+      }
+
+      if (value == '=') {
+        _calculateFinal();
+        return;
+      }
+
+      if (_isOperator(value)) {
+        if (_expression.isEmpty) {
+          if (value == '-') {
+            _expression = '-';
+          }
+        } else {
+          final last = _expression[_expression.length - 1];
+
+          if (_isOperator(last)) {
+            _expression =
+                _expression.substring(0, _expression.length - 1) +
+                    value;
+          } else {
+            _expression += value;
+          }
+        }
+      } else if (value == '.') {
+        final currentNumber = _currentNumber();
+
+        if (!currentNumber.contains('.')) {
+          if (_expression.isEmpty ||
+              _isOperator(_expression[_expression.length - 1])) {
+            _expression += '0.';
+          } else {
+            _expression += '.';
+          }
+        }
+      } else {
+        _expression += value;
+      }
+
+      _calculatePreview();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_expressionScrollController.hasClients) {
+          _expressionScrollController.jumpTo(
+            _expressionScrollController.position.maxScrollExtent,
+          );
+        }
+      });
+    });
   }
 
-  String formatTime(int totalMinutes) {
-    final negative = totalMinutes < 0;
+  String _currentNumber() {
+    if (_expression.isEmpty) return '';
 
+    int index = _expression.length - 1;
+
+    while (index >= 0 && !_isOperator(_expression[index])) {
+      index--;
+    }
+
+    return _expression.substring(index + 1);
+  }
+
+  bool _isOperator(String value) {
+    return value == '+' ||
+        value == '-' ||
+        value == '×' ||
+        value == '÷';
+  }
+
+  List<String> _tokens(String expression) {
+    final result = <String>[];
+    String number = '';
+
+    for (int i = 0; i < expression.length; i++) {
+      final char = expression[i];
+
+      if (_isOperator(char)) {
+        if (number.isNotEmpty) {
+          result.add(number);
+          number = '';
+        }
+
+        result.add(char);
+      } else {
+        number += char;
+      }
+    }
+
+    if (number.isNotEmpty) {
+      result.add(number);
+    }
+
+    return result;
+  }
+
+  int? _parseTime(String value) {
+    if (value.isEmpty || value == '-') {
+      return null;
+    }
+
+    final negative = value.startsWith('-');
+    final clean = negative ? value.substring(1) : value;
+
+    try {
+      if (clean.contains('.')) {
+        final parts = clean.split('.');
+
+        final hours = int.parse(
+          parts[0].isEmpty ? '0' : parts[0],
+        );
+
+        String minuteText = parts.length > 1 ? parts[1] : '0';
+
+        if (minuteText.isEmpty) {
+          minuteText = '0';
+        }
+
+        if (minuteText.length == 1) {
+          minuteText = '${minuteText}0';
+        }
+
+        final minutes = int.parse(minuteText);
+
+        if (minutes >= 60) {
+          return null;
+        }
+
+        final total = hours * 60 + minutes;
+
+        return negative ? -total : total;
+      }
+
+      return int.parse(clean) * 60 * (negative ? -1 : 1);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int? _evaluateMinutes(String expression) {
+    if (expression.isEmpty) return null;
+
+    final tokens = _tokens(expression);
+
+    if (tokens.isEmpty) return null;
+
+    if (_isOperator(tokens.last)) {
+      tokens.removeLast();
+    }
+
+    if (tokens.isEmpty) return null;
+
+    try {
+      final numbers = <int>[];
+      final operators = <String>[];
+
+      for (final token in tokens) {
+        if (_isOperator(token)) {
+          operators.add(token);
+        } else {
+          final value = _parseTime(token);
+
+          if (value == null) return null;
+
+          numbers.add(value);
+        }
+      }
+
+      if (numbers.isEmpty) return null;
+
+      for (int i = 0; i < operators.length;) {
+        if (operators[i] == '×' || operators[i] == '÷') {
+          final left = numbers[i];
+          final right = numbers[i + 1];
+
+          int value;
+
+          if (operators[i] == '×') {
+            value = left * right;
+          } else {
+            if (right == 0) return null;
+            value = left ~/ right;
+          }
+
+          numbers[i] = value;
+          numbers.removeAt(i + 1);
+          operators.removeAt(i);
+        } else {
+          i++;
+        }
+      }
+
+      int result = numbers[0];
+
+      for (int i = 0; i < operators.length; i++) {
+        if (operators[i] == '+') {
+          result += numbers[i + 1];
+        } else if (operators[i] == '-') {
+          result -= numbers[i + 1];
+        }
+      }
+
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _calculatePreview() {
+    final value = _evaluateMinutes(_expression);
+
+    if (value != null) {
+      _resultMinutes = value;
+    } else {
+      _resultMinutes = 0;
+    }
+  }
+
+  void _calculateFinal() {
+    final value = _evaluateMinutes(_expression);
+
+    if (value == null) {
+      return;
+    }
+
+    if (_expression.isNotEmpty) {
+      _history.insert(
+        0,
+        '$_expression = ${_formatTime(value)}',
+      );
+
+      if (_history.length > 30) {
+        _history.removeLast();
+      }
+    }
+
+    setState(() {
+      _resultMinutes = value;
+    });
+  }
+
+  String _formatTime(int totalMinutes) {
+    final negative = totalMinutes < 0;
     final absolute = totalMinutes.abs();
 
     final hours = absolute ~/ 60;
     final minutes = absolute % 60;
 
-    return '${negative ? '-' : ''}$hours.${minutes.toString().padLeft(2, '0')}';
+    final result =
+        '$hours ঘণ্টা $minutes মিনিট';
+
+    return negative ? '-$result' : result;
   }
 
-  void press(String value) {
-    setState(() {
-      if (value == 'C') {
-        display = '0.00';
-        firstMinutes = null;
-        operation = null;
-        clearNext = false;
-        return;
-      }
+  String _formatShortTime(int totalMinutes) {
+    final negative = totalMinutes < 0;
+    final absolute = totalMinutes.abs();
 
-      if (value == '+' ||
-          value == '-' ||
-          value == '×' ||
-          value == '÷') {
-        firstMinutes = parseTime(display);
-        operation = value;
-        clearNext = true;
-        return;
-      }
+    final hours = absolute ~/ 60;
+    final minutes = absolute % 60;
 
-      if (value == '=') {
-        if (firstMinutes == null || operation == null) {
-          return;
-        }
+    final result =
+        '${hours.toString()}.${minutes.toString().padLeft(2, '0')}';
 
-        final second = parseTime(display);
-
-        int result = 0;
-
-        switch (operation) {
-          case '+':
-            result = firstMinutes! + second;
-            break;
-
-          case '-':
-            result = firstMinutes! - second;
-            break;
-
-          case '×':
-            result = firstMinutes! * second;
-            break;
-
-          case '÷':
-            if (second == 0) {
-              display = 'Error';
-              return;
-            }
-
-            result = firstMinutes! ~/ second;
-            break;
-        }
-
-        display = formatTime(result);
-
-        firstMinutes = null;
-        operation = null;
-        clearNext = true;
-
-        return;
-      }
-
-      if (value == '.') {
-        if (!display.contains('.')) {
-          display += '.';
-        }
-
-        return;
-      }
-
-      if (clearNext) {
-        display = value;
-        clearNext = false;
-      } else {
-        if (display == '0.00' || display == '0') {
-          display = value;
-        } else {
-          display += value;
-        }
-      }
-    });
+    return negative ? '-$result' : result;
   }
 
-  void calculateDailyAverage() {
-    final total = parseTime(display);
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        final controller = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('দৈনিক গড়'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'কত দিনের হিসাব?',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('বাতিল'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final days = int.tryParse(controller.text);
-
-                if (days == null || days <= 0) return;
-
-                final average = total ~/ days;
-
-                Navigator.pop(context);
-
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('দৈনিক গড়'),
-                    content: Text(
-                      formatTime(average),
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('ঠিক আছে'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: const Text('হিসাব'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void calculateMonthlyAverage() {
-    final total = parseTime(display);
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        final controller = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('মাসিক গড়'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'কত দিনের মাসিক হিসাব?',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('বাতিল'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final days = int.tryParse(controller.text);
-
-                if (days == null || days <= 0) return;
-
-                final average = total ~/ days;
-
-                Navigator.pop(context);
-
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('মাসিক গড়'),
-                    content: Text(
-                      formatTime(average),
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('ঠিক আছে'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: const Text('হিসাব'),
-            ),
-          ],
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _expressionScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -465,85 +927,367 @@ class _TimeCalculatorPageState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Time Calculator'),
+        actions: [
+          if (_history.isNotEmpty)
+            IconButton(
+              tooltip: 'History',
+              onPressed: _showHistory,
+              icon: const Icon(
+                Icons.history_rounded,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
+        ],
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: _display(),
+            ),
+            _quickTools(),
+            _keypad(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _display() {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: dark
+            ? const Color(0xFF10291F)
+            : const Color(0xFFFFFCF5),
+        border: Border.all(
+          color: const Color(0x44C9A45C),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Expanded(
-            child: Container(
-              alignment: Alignment.bottomRight,
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                display,
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                ),
+          SingleChildScrollView(
+            controller: _expressionScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              _expression.isEmpty ? '0.00' : _expression,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.color
+                    ?.withValues(alpha: 0.65),
               ),
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: calculateDailyAverage,
-                    icon: const Icon(Icons.today),
-                    label: const Text('দৈনিক গড়'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: calculateMonthlyAverage,
-                    icon: const Icon(Icons.calendar_month),
-                    label: const Text('মাসিক গড়'),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 10),
+          Text(
+            _formatTime(_resultMinutes),
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 27,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFC9A45C),
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          _timeButtons(),
+          const SizedBox(height: 5),
+          Text(
+            _formatShortTime(_resultMinutes),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.color
+                  ?.withValues(alpha: 0.60),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _timeButtons() {
-    const buttons = [
-      ['7', '8', '9', '÷'],
-      ['4', '5', '6', '×'],
-      ['1', '2', '3', '-'],
-      ['0', '.', '=', '+'],
-      ['C'],
+  Widget _quickTools() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: _toolButton(
+              icon: Icons.today_rounded,
+              title: 'Daily Average',
+              onTap: _showDailyAverage,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _toolButton(
+              icon: Icons.calendar_month_rounded,
+              title: 'Monthly Average',
+              onTap: _showMonthlyAverage,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _toolButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(
+        icon,
+        size: 18,
+      ),
+      label: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        side: const BorderSide(
+          color: Color(0x55C9A45C),
+        ),
+        foregroundColor: const Color(0xFFC9A45C),
+      ),
+    );
+  }
+
+  Widget _keypad() {
+    final buttons = [
+      ['C', '⌫', '÷', '×'],
+      ['7', '8', '9', '-'],
+      ['4', '5', '6', '+'],
+      ['1', '2', '3', '='],
+      ['0', '.', '', ''],
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Column(
         children: buttons.map((row) {
           return Row(
-            children: row.map((button) {
+            children: row.map((value) {
+              if (value.isEmpty) {
+                return const Expanded(
+                  child: SizedBox(height: 58),
+                );
+              }
+
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: ElevatedButton(
-                    onPressed: () => press(button),
-                    child: Text(
-                      button,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
+                  child: _button(value),
                 ),
               );
             }).toList(),
           );
         }).toList(),
       ),
+    );
+  }
+
+  Widget _button(String value) {
+    final operator = _isOperator(value);
+    final action = value == 'C' ||
+        value == '⌫' ||
+        value == '=';
+
+    return SizedBox(
+      height: 56,
+      child: ElevatedButton(
+        onPressed: () => _add(value),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: value == '='
+              ? const Color(0xFFC9A45C)
+              : operator
+                  ? const Color(0xFF176B45)
+                  : action
+                      ? const Color(0xFF294D3E)
+                      : Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF10291F)
+                          : const Color(0xFFFFFCF5),
+          foregroundColor: value == '='
+              ? const Color(0xFF18352A)
+              : Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(17),
+            side: const BorderSide(
+              color: Color(0x33C9A45C),
+            ),
+          ),
+          padding: EdgeInsets.zero,
+        ),
+        child: Text(
+          value,
+          style: TextStyle(
+            fontSize: value == '⌫' ? 22 : 20,
+            fontWeight: FontWeight.w800,
+            color: value == '='
+                ? const Color(0xFF18352A)
+                : (!operator && !action)
+                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDailyAverage() {
+    _showAverageDialog(
+      title: 'Daily Average',
+      hint: 'মোট সময় লিখুন',
+      days: 1,
+    );
+  }
+
+  void _showMonthlyAverage() {
+    _showAverageDialog(
+      title: 'Monthly Average',
+      hint: 'মোট সময় লিখুন',
+      days: 30,
+    );
+  }
+
+  void _showAverageDialog({
+    required String title,
+    required String hint,
+    required int days,
+  }) {
+    final controller = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              helperText: 'উদাহরণ: 10.30',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('বাতিল'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final minutes = _parseTime(controller.text.trim());
+
+                if (minutes == null || minutes < 0) {
+                  return;
+                }
+
+                final average = minutes ~/ days;
+
+                Navigator.pop(dialogContext);
+
+                _showResultDialog(
+                  title: title,
+                  result: _formatTime(average),
+                );
+              },
+              child: const Text('হিসাব'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showResultDialog({
+    required String title,
+    required String result,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(
+            result,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFFC9A45C),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ঠিক আছে'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showHistory() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Time Calculation History',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _history.length,
+                    itemBuilder: (_, index) {
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.history_rounded,
+                          color: Color(0xFFC9A45C),
+                        ),
+                        title: Text(_history[index]),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
