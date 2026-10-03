@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'about_screen.dart';
 import 'book_list_screen.dart';
 import 'books.dart';
 import 'calculator_screen.dart';
@@ -61,7 +62,6 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(width: 6),
         ],
       ),
-
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
@@ -123,6 +123,10 @@ class HomeScreen extends StatelessWidget {
 
             _calculatorCard(context),
 
+            const SizedBox(height: 28),
+
+            _aboutCard(context),
+
             const SizedBox(height: 24),
 
             _footer(context),
@@ -131,10 +135,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  // ═══════════════════════════════════════
-  // HERO
-  // ═══════════════════════════════════════
 
   Widget _heroSection(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -184,7 +184,6 @@ class HomeScreen extends StatelessWidget {
             bottom: -70,
             child: _decorativeCircle(110),
           ),
-
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -216,9 +215,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 22),
-
               const Text(
                 'ইসলামিক বই',
                 style: TextStyle(
@@ -228,9 +225,7 @@ class HomeScreen extends StatelessWidget {
                   letterSpacing: 0.2,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Text(
                 'জ্ঞান, চিন্তা ও আত্মগঠনের\nজন্য একটি সুন্দর পাঠভাণ্ডার',
                 style: TextStyle(
@@ -240,9 +235,7 @@ class HomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 22),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
@@ -296,25 +289,19 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════
-  // SECTION TITLE
-  // ═══════════════════════════════════════
-
   Widget _sectionTitle(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
     return Row(
       children: [
         Container(
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: dark
+            color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0x22176B45)
                 : const Color(0x14175132),
             borderRadius: BorderRadius.circular(13),
@@ -322,9 +309,9 @@ class HomeScreen extends StatelessWidget {
               color: const Color(0x44C9A45C),
             ),
           ),
-          child: const Icon(
-            Icons.menu_book_rounded,
-            color: Color(0xFFC9A45C),
+          child: Icon(
+            icon,
+            color: const Color(0xFFC9A45C),
             size: 21,
           ),
         ),
@@ -356,10 +343,6 @@ class HomeScreen extends StatelessWidget {
       ],
     );
   }
-
-  // ═══════════════════════════════════════
-  // CATEGORY CARD
-  // ═══════════════════════════════════════
 
   Widget _categoryCard(
     BuildContext context, {
@@ -411,9 +394,7 @@ class HomeScreen extends StatelessWidget {
                   size: 27,
                 ),
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,12 +421,11 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0x14C9A45C),
+                decoration: const BoxDecoration(
+                  color: Color(0x14C9A45C),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -458,9 +438,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 8),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
@@ -472,10 +450,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  // ═══════════════════════════════════════
-  // RENAISSANCE BOOK
-  // ═══════════════════════════════════════
 
   Widget _specialBookCard(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -565,10 +539,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════
-  // CALCULATOR
-  // ═══════════════════════════════════════
-
   Widget _calculatorCard(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
@@ -649,9 +619,90 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════
-  // FOOTER
-  // ═══════════════════════════════════════
+  Widget _aboutCard(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [
+                  Color(0xFF241F12),
+                  Color(0xFF151C17),
+                ]
+              : const [
+                  Color(0xFFFFF5D9),
+                  Color(0xFFFFFCF5),
+                ],
+        ),
+        border: Border.all(
+          color: const Color(0x55C9A45C),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AboutScreen(),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC9A45C),
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFF18352A),
+                  size: 29,
+                ),
+              ),
+              const SizedBox(width: 15),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'অ্যাপ সম্পর্কে',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'অ্যাপ ব্যবহার ও অন্যান্য তথ্য',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 17,
+                color: Color(0xFFC9A45C),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _footer(BuildContext context) {
     return Column(
