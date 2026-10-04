@@ -2,10 +2,15 @@ class Book {
   final String title;
   final String category;
   final String driveUrl;
+
+  const Book({
+    required this.title,
+    required this.category,
+    required this.driveUrl,
+  });
 }
 
 const List<Book> books = [
-
   // =========================
   // আবেদনপত্রের কন্টাক্টের আগে
   // =========================
@@ -227,7 +232,7 @@ const List<Book> books = [
   ),
   Book(
     title: 'মুসলিম যুবসমাজের ক্যারিয়ার গঠন ও দক্ষতা উন্নয়ন',
-    category: 'আবেদনপত্রের আগে',
+    category: 'আবেদনপত্রের কন্টাক্টের আগে',
     driveUrl: 'https://drive.google.com/file/d/1VGefbOF6vkHOSm3_GmsVxBS_hcTKtmxt/view?usp=drive_link',
   ),
 
