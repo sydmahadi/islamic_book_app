@@ -33,7 +33,7 @@ class _IslamicBookAppState extends State<IslamicBookApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'ইসলামিক বই',
+      title: 'সদস্য সিলেবাসের বই',
       themeMode: _themeMode,
 
       // ═══════════════════════════════════════
