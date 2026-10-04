@@ -45,7 +45,8 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     return file.exists();
   }
 
-  // Google Drive View/Share URL থেকে সরাসরি Download URL তৈরি করে।
+  // Google Drive-এর বিভিন্ন Share/View URL থেকে
+  // সরাসরি Download URL তৈরি করে।
   String convertDriveUrl(String url) {
     final uri = Uri.tryParse(url);
 
@@ -58,7 +59,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     }
 
     // Example:
-    // https://drive.google.com/file/d/FILE_ID/view
+    // https://drive.google.com/file/d/FILE_ID/view?usp=drivesdk
     final segments = uri.pathSegments;
 
     final dIndex = segments.indexOf('d');
@@ -66,17 +67,21 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     if (dIndex != -1 && dIndex + 1 < segments.length) {
       final fileId = segments[dIndex + 1];
 
-      return 'https://drive.usercontent.google.com/download'
-          '?id=$fileId&export=download&confirm=t';
+      return 'https://drive.google.com/uc'
+          '?export=download'
+          '&id=$fileId';
     }
 
     // Example:
     // https://drive.google.com/open?id=FILE_ID
+    // অথবা
+    // https://drive.google.com/uc?id=FILE_ID
     final queryId = uri.queryParameters['id'];
 
     if (queryId != null && queryId.isNotEmpty) {
-      return 'https://drive.usercontent.google.com/download'
-          '?id=$queryId&export=download&confirm=t';
+      return 'https://drive.google.com/uc'
+          '?export=download'
+          '&id=$queryId';
     }
 
     return url;
@@ -111,8 +116,9 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
   }
 
   Future<void> downloadBook() async {
-    if (widget.book.driveUrl.trim().isEmpty ||
-        widget.book.driveUrl.contains('PASTE_')) {
+    final originalUrl = widget.book.driveUrl.trim();
+
+    if (originalUrl.isEmpty || originalUrl.contains('PASTE_')) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,89 +144,182 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     File? file;
 
     try {
-      final downloadUrl = convertDriveUrl(
-        widget.book.driveUrl.trim(),
-      );
+      final downloadUrl = convertDriveUrl(originalUrl);
 
-      final request = http.Request(
-        'GET',
-        Uri.parse(downloadUrl),
-      );
+      final uri = Uri.parse(downloadUrl);
 
-      request.headers.addAll({
-        'Accept': 'application/pdf,application/octet-stream,*/*',
-        'User-Agent': 'Mozilla/5.0',
-      });
-
-      final response = await request.send();
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Server error: ${response.statusCode}',
-        );
-      }
-
-      final total = response.contentLength ?? 0;
-
-      file = await localFile;
-
-      // আগের অসম্পূর্ণ/পুরোনো PDF থাকলে মুছে দিই।
-      if (await file.exists()) {
-        await file.delete();
-      }
-
-      final sink = file.openWrite();
-
-      int received = 0;
+      final client = http.Client();
 
       try {
-        await for (final chunk in response.stream) {
-          sink.add(chunk);
-          received += chunk.length;
+        final request = http.Request(
+          'GET',
+          uri,
+        );
 
-          if (total > 0 && mounted) {
-            setState(() {
-              progress = received / total;
-            });
-          }
+        request.headers.addAll({
+          'Accept': 'application/pdf,application/octet-stream,*/*',
+          'User-Agent':
+              'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
+        });
+
+        final response = await client
+            .send(request)
+            .timeout(
+              const Duration(minutes: 5),
+            );
+
+        if (response.statusCode != 200) {
+          throw Exception(
+            'Google Drive থেকে file পাওয়া যায়নি। '
+            'HTTP ${response.statusCode}',
+          );
         }
+
+        final contentType =
+            response.headers['content-type']?.toLowerCase() ?? '';
+
+        final total = response.contentLength ?? 0;
+
+        file = await localFile;
+
+        // আগের অসম্পূর্ণ/পুরোনো file থাকলে মুছে দিই।
+        if (await file.exists()) {
+          await file.delete();
+        }
+
+        final sink = file.openWrite();
+
+        int received = 0;
+
+        try {
+          await for (final chunk in response.stream) {
+            sink.add(chunk);
+
+            received += chunk.length;
+
+            if (total > 0 && mounted) {
+              setState(() {
+                progress = received / total;
+              });
+            }
+          }
+        } finally {
+          await sink.close();
+        }
+
+        if (!await file.exists()) {
+          throw Exception(
+            'PDF file তৈরি করা যায়নি।',
+          );
+        }
+
+        final fileSize = await file.length();
+
+        if (fileSize == 0) {
+          await file.delete();
+
+          throw Exception(
+            'Download করা file খালি।',
+          );
+        }
+
+        // Google Drive কখনো PDF-এর বদলে HTML error/permission page
+        // পাঠাতে পারে। Content-Type দেখে সেটাও ধরছি।
+        final looksLikeHtml = contentType.contains('text/html');
+
+        if (looksLikeHtml) {
+          await file.delete();
+
+          throw Exception(
+            'Google Drive PDF-এর বদলে একটি webpage পাঠিয়েছে। '
+            'বইটির Google Drive sharing "Anyone with the link" '
+            'করা আছে কি না পরীক্ষা করুন।',
+          );
+        }
+
+        // PDF file-এর প্রথম কয়েকটি byte যাচাই।
+        final raf = await file.open();
+
+        List<int> header = [];
+
+        try {
+          header = await raf.read(5);
+        } finally {
+          await raf.close();
+        }
+
+        final headerText = String.fromCharCodes(header);
+
+        if (!headerText.startsWith('%PDF-')) {
+          await file.delete();
+
+          throw Exception(
+            'Download করা fileটি valid PDF নয়। '
+            'Google Drive link বা sharing permission পরীক্ষা করুন।',
+          );
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          downloading = false;
+          progress = 1;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'বইটি Download হয়েছে। এখন Offline-এ পড়তে পারবেন।',
+            ),
+          ),
+        );
       } finally {
-        await sink.close();
+        client.close();
       }
-
-      // File তৈরি হয়েছে কি না যাচাই।
-      if (!await file.exists()) {
-        throw Exception(
-          'PDF file তৈরি করা যায়নি।',
-        );
-      }
-
-      final fileSize = await file.length();
-
-      if (fileSize == 0) {
-        await file.delete();
-
-        throw Exception(
-          'Download করা PDF খালি।',
-        );
-      }
+    } on SocketException catch (e) {
+      try {
+        if (file != null && await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
 
       if (!mounted) return;
 
       setState(() {
         downloading = false;
-        progress = 1;
+        progress = 0;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'বইটি Download হয়েছে। এখন Offline-এ পড়তে পারবেন।',
+            'Internet/Google Drive connection সমস্যা হয়েছে।\n$e',
+          ),
+        ),
+      );
+    } on HttpException catch (e) {
+      try {
+        if (file != null && await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      setState(() {
+        downloading = false;
+        progress = 0;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Download করতে সমস্যা হয়েছে।\n$e',
           ),
         ),
       );
     } catch (e) {
-      // Download ব্যর্থ হলে অসম্পূর্ণ file মুছে দিই।
       try {
         if (file != null && await file.exists()) {
           await file.delete();
