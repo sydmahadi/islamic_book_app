@@ -23,10 +23,28 @@ jobs:
       - name: Show Flutter Version
         run: flutter --version
 
-      # Generate a fresh modern Android project.
-      # This replaces the deleted/old Android configuration.
+      # Generate a fresh Android project.
       - name: Generate Android Project
         run: flutter create --platforms=android --project-name islamic_book_app .
+
+      # Make sure Android app has Internet permission.
+      - name: Ensure Internet Permission
+        shell: bash
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "AndroidManifest.xml not found!"
+            exit 1
+          fi
+
+          if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
+            sed -i '/<manifest/a\
+              <uses-permission android:name="android.permission.INTERNET"/>' "$MANIFEST"
+          fi
+
+          echo "Internet permission:"
+          grep 'android.permission.INTERNET' "$MANIFEST"
 
       - name: Flutter Pub Get
         run: flutter pub get
