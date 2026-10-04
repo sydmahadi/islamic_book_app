@@ -15,14 +15,19 @@ class BookListScreen extends StatelessWidget {
     switch (category) {
       case 'আবেদনপত্রের কন্টাক্টের আগে':
         return Icons.edit_document;
+
       case 'প্রশ্নপত্রের কন্টাক্টের আগে':
         return Icons.quiz_rounded;
+
       case 'শপথ কন্টাক্টের আগে':
         return Icons.workspace_premium_rounded;
+
       case 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)':
-        return Icons.workspace_premium_rounded;
+        return Icons.menu_book_rounded;
+
       case 'হাদীস গ্রন্থ':
-        return Icons.workspace_premium_rounded; 
+        return Icons.menu_book_rounded;
+
       default:
         return Icons.menu_book_rounded;
     }
@@ -32,14 +37,19 @@ class BookListScreen extends StatelessWidget {
     switch (category) {
       case 'আবেদনপত্রের কন্টাক্টের আগে':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+
       case 'প্রশ্নপত্রের কন্টাক্টের আগে':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+
       case 'শপথ কন্টাক্টের আগে':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+
       case 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+
       case 'হাদীস গ্রন্থ':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+
       default:
         return 'এই বিভাগের বইগুলো';
     }
@@ -269,11 +279,12 @@ class BookListScreen extends StatelessWidget {
 
               const SizedBox(width: 8),
 
+              // Arrow
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0x14C9A45C),
+                decoration: const BoxDecoration(
+                  color: Color(0x14C9A45C),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
