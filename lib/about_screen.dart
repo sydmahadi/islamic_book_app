@@ -110,10 +110,11 @@ class AboutScreen extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          _developerCard(
-            context,
-            dark,
-          ),
+          _ayatCard(context, dark),
+
+          const SizedBox(height: 18),
+
+          _developerCard(context, dark),
 
           const SizedBox(height: 24),
 
@@ -171,11 +172,9 @@ class AboutScreen extends StatelessWidget {
               size: 42,
             ),
           ),
-
           const SizedBox(height: 18),
-
           const Text(
-            'সদস্য সিলেবাসের বই',
+            'সদস্য সিলেবাস',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
@@ -183,12 +182,9 @@ class AboutScreen extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-
           const SizedBox(height: 7),
-
           const Text(
-            'পড়ো তোমার প্রতিপালকের নামে, যিনি সৃষ্টি করেছেন।”
-— সূরা আল-আলাক, ৯৬:১',
+            'জ্ঞান • পাঠ • আত্মগঠন',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFE3C875),
@@ -239,9 +235,7 @@ class AboutScreen extends StatelessWidget {
               size: 23,
             ),
           ),
-
           const SizedBox(width: 14),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,9 +247,7 @@ class AboutScreen extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
                 const SizedBox(height: 7),
-
                 Text(
                   text,
                   style: TextStyle(
@@ -271,6 +263,63 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ayatCard(
+    BuildContext context,
+    bool dark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: dark
+            ? const Color(0xFF10291F)
+            : const Color(0xFFFFFCF5),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0x66C9A45C),
+        ),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.auto_awesome_rounded,
+            color: Color(0xFFC9A45C),
+            size: 28,
+          ),
+
+          const SizedBox(height: 12),
+
+          const Text(
+            'পড়ো তোমার প্রতিপালকের নামে, যিনি সৃষ্টি করেছেন।',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 17,
+              height: 1.7,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            'সূরা আল-আলাক, ৯৬:১',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.color
+                  ?.withValues(
+                    alpha: 0.65,
+                  ),
             ),
           ),
         ],
@@ -310,9 +359,7 @@ class AboutScreen extends StatelessWidget {
             color: Color(0xFFC9A45C),
             size: 30,
           ),
-
           const SizedBox(height: 10),
-
           const Text(
             'Developed by',
             style: TextStyle(
@@ -321,9 +368,7 @@ class AboutScreen extends StatelessWidget {
               color: Color(0xFFC9A45C),
             ),
           ),
-
           const SizedBox(height: 5),
-
           const Text(
             'Talpatar Sepai',
             style: TextStyle(
@@ -331,9 +376,7 @@ class AboutScreen extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-
           const SizedBox(height: 6),
-
           const Text(
             'm.talpatarsepai@gmail.com',
             textAlign: TextAlign.center,
@@ -360,9 +403,7 @@ class AboutScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-
         const SizedBox(height: 12),
-
         Text(
           'পড়ুন • শিখুন • নিজেকে গড়ুন',
           textAlign: TextAlign.center,
