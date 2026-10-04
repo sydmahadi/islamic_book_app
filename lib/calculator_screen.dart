@@ -1,261 +1,544 @@
 import 'package:flutter/material.dart';
 
-class CalculatorScreen extends StatelessWidget {
+class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
+
+  @override
+  State<CalculatorScreen> createState() => _CalculatorScreenState();
+}
+
+class _CalculatorScreenState extends State<CalculatorScreen> {
+  bool _isTimeCalculator = true;
+
+  // ============================================================
+  // TIME CALCULATOR STATE
+  // ============================================================
+
+  String _timeExpression = '';
+  int _timeResultMinutes = 0;
+
+  final ScrollController _timeExpressionScrollController =
+      ScrollController();
+
+  final List<String> _timeHistory = [];
+
+  // ============================================================
+  // NORMAL CALCULATOR STATE
+  // ============================================================
+
+  String _normalExpression = '';
+  String _normalResult = '0';
+
+  final ScrollController _normalExpressionScrollController =
+      ScrollController();
+
+  final List<String> _normalHistory = [];
+
+  // ============================================================
+  // MAIN
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ক্যালকুলেটর'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
-        children: [
-          _CalculatorChoiceCard(
-            icon: Icons.calculate_rounded,
-            title: 'Normal Calculator',
-            subtitle: 'সাধারণ যোগ, বিয়োগ, গুণ ও ভাগ',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NormalCalculatorPage(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 14),
-          _CalculatorChoiceCard(
-            icon: Icons.access_time_rounded,
-            title: 'Time Calculator',
-            subtitle: '১.২০ = ১ ঘণ্টা ২০ মিনিট',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const TimeCalculatorPage(),
-                ),
-              );
-            },
-          ),
+        actions: [
+          if (_isTimeCalculator && _timeHistory.isNotEmpty)
+            IconButton(
+              tooltip: 'History',
+              onPressed: _showTimeHistory,
+              icon: const Icon(
+                Icons.history_rounded,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
+          if (!_isTimeCalculator && _normalHistory.isNotEmpty)
+            IconButton(
+              tooltip: 'History',
+              onPressed: _showNormalHistory,
+              icon: const Icon(
+                Icons.history_rounded,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
         ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+
+            // ==================================================
+            // CALCULATOR TOGGLE
+            // ==================================================
+
+            _calculatorToggle(),
+
+            const SizedBox(height: 10),
+
+            // ==================================================
+            // CALCULATOR BODY
+            // ==================================================
+
+            Expanded(
+              child: _isTimeCalculator
+                  ? _buildTimeCalculator()
+                  : _buildNormalCalculator(),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _CalculatorChoiceCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  // ============================================================
+  // TOGGLE
+  // ============================================================
 
-  const _CalculatorChoiceCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  Widget _calculatorToggle() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF10291F)
+              : const Color(0xFFFFFCF5),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0x55C9A45C),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _toggleItem(
+                title: 'Time Calculator',
+                icon: Icons.access_time_rounded,
+                selected: _isTimeCalculator,
+                onTap: () {
+                  if (!_isTimeCalculator) {
+                    setState(() {
+                      _isTimeCalculator = true;
+                    });
+                  }
+                },
+              ),
+            ),
+            Expanded(
+              child: _toggleItem(
+                title: 'Normal Calculator',
+                icon: Icons.calculate_rounded,
+                selected: !_isTimeCalculator,
+                onTap: () {
+                  if (_isTimeCalculator) {
+                    setState(() {
+                      _isTimeCalculator = false;
+                    });
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _toggleItem({
+    required String title,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF176B45)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: selected
+                  ? const Color(0xFFC9A45C)
+                  : Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.color
+                      ?.withValues(alpha: 0.65),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight:
+                      selected ? FontWeight.w900 : FontWeight.w600,
+                  color: selected
+                      ? Colors.white
+                      : Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // TIME CALCULATOR
+  // ============================================================
+
+  Widget _buildTimeCalculator() {
+    return Column(
+      children: [
+        Expanded(
+          child: _timeDisplay(),
+        ),
+        _timeQuickTools(),
+        _timeKeypad(),
+      ],
+    );
+  }
+
+  Widget _timeDisplay() {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+      padding: const EdgeInsets.all(18),
+      width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [
-                  Color(0xFF176B45),
-                  Color(0xFF0F5132),
-                ]
-              : const [
-                  Color(0xFF176B45),
-                  Color(0xFF0F5132),
-                ],
-        ),
+        color: dark
+            ? const Color(0xFF10291F)
+            : const Color(0xFFFFFCF5),
         border: Border.all(
-          color: const Color(0x55C9A45C),
+          color: const Color(0x44C9A45C),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: dark ? 0.20 : 0.08,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          SingleChildScrollView(
+            controller: _timeExpressionScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              _timeExpression.isEmpty
+                  ? '0.00'
+                  : _timeExpression,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.color
+                    ?.withValues(alpha: 0.65),
+              ),
             ),
-            blurRadius: 15,
-            offset: const Offset(0, 7),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _formatTime(_timeResultMinutes),
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 27,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFC9A45C),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _formatShortTime(_timeResultMinutes),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.color
+                  ?.withValues(alpha: 0.60),
+            ),
           ),
         ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC9A45C),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF18352A),
-                  size: 30,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xD9FFFFFF),
-                        fontSize: 12.5,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Color(0xFFE3C875),
-                size: 17,
-              ),
-            ],
+    );
+  }
+
+  Widget _timeQuickTools() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: _toolButton(
+              icon: Icons.today_rounded,
+              title: 'দৈনিক গড়',
+              onTap: _showTimeDailyAverage,
+            ),
           ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _toolButton(
+              icon: Icons.calendar_month_rounded,
+              title: 'মাসিক গড়',
+              onTap: _showTimeMonthlyAverage,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // NORMAL CALCULATOR
+  // ============================================================
+
+  Widget _buildNormalCalculator() {
+    return Column(
+      children: [
+        Expanded(
+          child: _normalDisplay(),
+        ),
+        _normalQuickTools(),
+        _normalKeypad(),
+      ],
+    );
+  }
+
+  Widget _normalDisplay() {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: dark
+            ? const Color(0xFF10291F)
+            : const Color(0xFFFFFCF5),
+        border: Border.all(
+          color: const Color(0x44C9A45C),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          SingleChildScrollView(
+            controller: _normalExpressionScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              _normalExpression.isEmpty
+                  ? '0'
+                  : _normalExpression,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.color
+                    ?.withValues(alpha: 0.65),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              _normalResult,
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFC9A45C),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _normalQuickTools() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: _toolButton(
+              icon: Icons.today_rounded,
+              title: 'দৈনিক গড়',
+              onTap: _showNormalDailyAverage,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _toolButton(
+              icon: Icons.calendar_month_rounded,
+              title: 'মাসিক গড়',
+              onTap: _showNormalMonthlyAverage,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // COMMON TOOL BUTTON
+  // ============================================================
+
+  Widget _toolButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(
+        icon,
+        size: 18,
+      ),
+      label: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        side: const BorderSide(
+          color: Color(0x55C9A45C),
+        ),
+        foregroundColor: const Color(0xFFC9A45C),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
         ),
       ),
     );
   }
-}
 
-// ============================================================
-// NORMAL CALCULATOR
-// ============================================================
+  // ============================================================
+  // NORMAL CALCULATOR LOGIC
+  // ============================================================
 
-class NormalCalculatorPage extends StatefulWidget {
-  const NormalCalculatorPage({super.key});
-
-  @override
-  State<NormalCalculatorPage> createState() =>
-      _NormalCalculatorPageState();
-}
-
-class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
-  String _expression = '';
-  String _result = '0';
-
-  final ScrollController _expressionScrollController =
-      ScrollController();
-
-  final List<String> _history = [];
-
-  void _add(String value) {
+  void _addNormal(String value) {
     setState(() {
       if (value == 'C') {
-        _expression = '';
-        _result = '0';
+        _normalExpression = '';
+        _normalResult = '0';
         return;
       }
 
       if (value == '⌫') {
-        if (_expression.isNotEmpty) {
-          _expression =
-              _expression.substring(0, _expression.length - 1);
+        if (_normalExpression.isNotEmpty) {
+          _normalExpression = _normalExpression.substring(
+            0,
+            _normalExpression.length - 1,
+          );
         }
-        _calculatePreview();
+
+        _calculateNormalPreview();
         return;
       }
 
       if (value == '=') {
-        _calculateFinal();
+        _calculateNormalFinal();
         return;
       }
 
       if (_isOperator(value)) {
-        if (_expression.isEmpty) {
+        if (_normalExpression.isEmpty) {
           if (value == '-') {
-            _expression = '-';
+            _normalExpression = '-';
           }
         } else {
-          final last = _expression[_expression.length - 1];
+          final last =
+              _normalExpression[_normalExpression.length - 1];
 
           if (_isOperator(last)) {
-            _expression =
-                _expression.substring(0, _expression.length - 1) +
+            _normalExpression =
+                _normalExpression.substring(
+                      0,
+                      _normalExpression.length - 1,
+                    ) +
                     value;
           } else {
-            _expression += value;
+            _normalExpression += value;
           }
         }
       } else if (value == '.') {
-        final currentNumber = _currentNumber();
+        final currentNumber = _normalCurrentNumber();
 
         if (!currentNumber.contains('.')) {
-          if (_expression.isEmpty ||
-              _isOperator(_expression[_expression.length - 1])) {
-            _expression += '0.';
+          if (_normalExpression.isEmpty ||
+              _isOperator(
+                _normalExpression[
+                    _normalExpression.length - 1],
+              )) {
+            _normalExpression += '0.';
           } else {
-            _expression += '.';
+            _normalExpression += '.';
           }
         }
       } else {
-        _expression += value;
+        _normalExpression += value;
       }
 
-      _calculatePreview();
+      _calculateNormalPreview();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_expressionScrollController.hasClients) {
-          _expressionScrollController.jumpTo(
-            _expressionScrollController.position.maxScrollExtent,
+        if (_normalExpressionScrollController.hasClients) {
+          _normalExpressionScrollController.jumpTo(
+            _normalExpressionScrollController
+                .position
+                .maxScrollExtent,
           );
         }
       });
     });
   }
 
-  String _currentNumber() {
-    if (_expression.isEmpty) return '';
+  String _normalCurrentNumber() {
+    if (_normalExpression.isEmpty) return '';
 
-    int index = _expression.length - 1;
+    int index = _normalExpression.length - 1;
 
-    while (index >= 0 && !_isOperator(_expression[index])) {
+    while (
+        index >= 0 &&
+        !_isOperator(_normalExpression[index])) {
       index--;
     }
 
-    return _expression.substring(index + 1);
+    return _normalExpression.substring(index + 1);
   }
 
-  bool _isOperator(String value) {
-    return value == '+' ||
-        value == '-' ||
-        value == '×' ||
-        value == '÷';
-  }
-
-  List<String> _tokens(String expression) {
+  List<String> _normalTokens(String expression) {
     final result = <String>[];
     String number = '';
 
@@ -281,10 +564,10 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
     return result;
   }
 
-  double? _evaluate(String expression) {
+  double? _evaluateNormal(String expression) {
     if (expression.isEmpty) return null;
 
-    final tokens = _tokens(expression);
+    final tokens = _normalTokens(expression);
 
     if (tokens.isEmpty) return null;
 
@@ -309,7 +592,8 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
       if (numbers.isEmpty) return null;
 
       for (int i = 0; i < operators.length;) {
-        if (operators[i] == '×' || operators[i] == '÷') {
+        if (operators[i] == '×' ||
+            operators[i] == '÷') {
           final left = numbers[i];
           final right = numbers[i + 1];
 
@@ -362,18 +646,18 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
         .replaceFirst(RegExp(r'\.$'), '');
   }
 
-  void _calculatePreview() {
-    final value = _evaluate(_expression);
+  void _calculateNormalPreview() {
+    final value = _evaluateNormal(_normalExpression);
 
     if (value != null) {
-      _result = _formatNumber(value);
+      _normalResult = _formatNumber(value);
     } else {
-      _result = '0';
+      _normalResult = '0';
     }
   }
 
-  void _calculateFinal() {
-    final value = _evaluate(_expression);
+  void _calculateNormalFinal() {
+    final value = _evaluateNormal(_normalExpression);
 
     if (value == null) {
       return;
@@ -381,115 +665,27 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
 
     final formatted = _formatNumber(value);
 
-    if (_expression.isNotEmpty) {
-      _history.insert(
+    if (_normalExpression.isNotEmpty) {
+      _normalHistory.insert(
         0,
-        '$_expression = $formatted',
+        '$_normalExpression = $formatted',
       );
 
-      if (_history.length > 30) {
-        _history.removeLast();
+      if (_normalHistory.length > 30) {
+        _normalHistory.removeLast();
       }
     }
 
     setState(() {
-      _result = formatted;
+      _normalResult = formatted;
     });
   }
 
-  @override
-  void dispose() {
-    _expressionScrollController.dispose();
-    super.dispose();
-  }
+  // ============================================================
+  // NORMAL KEYPAD
+  // ============================================================
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Normal Calculator'),
-        actions: [
-          if (_history.isNotEmpty)
-            IconButton(
-              tooltip: 'History',
-              onPressed: _showHistory,
-              icon: const Icon(
-                Icons.history_rounded,
-                color: Color(0xFFC9A45C),
-              ),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: _display(),
-            ),
-            _keypad(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _display() {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      padding: const EdgeInsets.all(18),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: dark
-            ? const Color(0xFF10291F)
-            : const Color(0xFFFFFCF5),
-        border: Border.all(
-          color: const Color(0x44C9A45C),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          SingleChildScrollView(
-            controller: _expressionScrollController,
-            scrollDirection: Axis.horizontal,
-            reverse: false,
-            child: Text(
-              _expression.isEmpty ? '0' : _expression,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withValues(alpha: 0.65),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              _result,
-              maxLines: 1,
-              style: const TextStyle(
-                fontSize: 38,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFC9A45C),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _keypad() {
+  Widget _normalKeypad() {
     final buttons = [
       ['C', '⌫', '÷', '×'],
       ['7', '8', '9', '-'],
@@ -506,14 +702,14 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
             children: row.map((value) {
               if (value.isEmpty) {
                 return const Expanded(
-                  child: SizedBox(height: 64),
+                  child: SizedBox(height: 58),
                 );
               }
 
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: _button(value),
+                  child: _normalButton(value),
                 ),
               );
             }).toList(),
@@ -523,16 +719,15 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
     );
   }
 
-  Widget _button(String value) {
+  Widget _normalButton(String value) {
     final operator = _isOperator(value);
-    final action = value == 'C' ||
-        value == '⌫' ||
-        value == '=';
+    final action =
+        value == 'C' || value == '⌫' || value == '=';
 
     return SizedBox(
-      height: 62,
+      height: 56,
       child: ElevatedButton(
-        onPressed: () => _add(value),
+        onPressed: () => _addNormal(value),
         style: ElevatedButton.styleFrom(
           backgroundColor: value == '='
               ? const Color(0xFFC9A45C)
@@ -540,7 +735,8 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
                   ? const Color(0xFF176B45)
                   : action
                       ? const Color(0xFF294D3E)
-                      : Theme.of(context).brightness == Brightness.dark
+                      : Theme.of(context).brightness ==
+                              Brightness.dark
                           ? const Color(0xFF10291F)
                           : const Color(0xFFFFFCF5),
           foregroundColor: value == '='
@@ -549,8 +745,8 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(17),
-            side: BorderSide(
-              color: const Color(0x33C9A45C),
+            side: const BorderSide(
+              color: Color(0x33C9A45C),
             ),
           ),
           padding: EdgeInsets.zero,
@@ -558,12 +754,15 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
         child: Text(
           value,
           style: TextStyle(
-            fontSize: value == '⌫' ? 23 : 21,
+            fontSize: value == '⌫' ? 22 : 20,
             fontWeight: FontWeight.w800,
             color: value == '='
                 ? const Color(0xFF18352A)
                 : (!operator && !action)
-                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    ? Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.color
                     : Colors.white,
           ),
         ),
@@ -571,178 +770,99 @@ class _NormalCalculatorPageState extends State<NormalCalculatorPage> {
     );
   }
 
-  void _showHistory() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Calculation History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _history.length,
-                    itemBuilder: (_, index) {
-                      return ListTile(
-                        leading: const Icon(
-                          Icons.history_rounded,
-                          color: Color(0xFFC9A45C),
-                        ),
-                        title: Text(_history[index]),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
+  // ============================================================
+  // TIME CALCULATOR LOGIC
+  // ============================================================
 
-// ============================================================
-// TIME CALCULATOR
-// ============================================================
-
-class TimeCalculatorPage extends StatefulWidget {
-  const TimeCalculatorPage({super.key});
-
-  @override
-  State<TimeCalculatorPage> createState() =>
-      _TimeCalculatorPageState();
-}
-
-class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
-  String _expression = '';
-  int _resultMinutes = 0;
-
-  final ScrollController _expressionScrollController =
-      ScrollController();
-
-  final List<String> _history = [];
-
-  void _add(String value) {
+  void _addTime(String value) {
     setState(() {
       if (value == 'C') {
-        _expression = '';
-        _resultMinutes = 0;
+        _timeExpression = '';
+        _timeResultMinutes = 0;
         return;
       }
 
       if (value == '⌫') {
-        if (_expression.isNotEmpty) {
-          _expression =
-              _expression.substring(0, _expression.length - 1);
+        if (_timeExpression.isNotEmpty) {
+          _timeExpression = _timeExpression.substring(
+            0,
+            _timeExpression.length - 1,
+          );
         }
-        _calculatePreview();
+
+        _calculateTimePreview();
         return;
       }
 
       if (value == '=') {
-        _calculateFinal();
+        _calculateTimeFinal();
         return;
       }
 
       if (_isOperator(value)) {
-        if (_expression.isEmpty) {
+        if (_timeExpression.isEmpty) {
           if (value == '-') {
-            _expression = '-';
+            _timeExpression = '-';
           }
         } else {
-          final last = _expression[_expression.length - 1];
+          final last =
+              _timeExpression[_timeExpression.length - 1];
 
           if (_isOperator(last)) {
-            _expression =
-                _expression.substring(0, _expression.length - 1) +
+            _timeExpression =
+                _timeExpression.substring(
+                      0,
+                      _timeExpression.length - 1,
+                    ) +
                     value;
           } else {
-            _expression += value;
+            _timeExpression += value;
           }
         }
       } else if (value == '.') {
-        final currentNumber = _currentNumber();
+        final currentNumber = _timeCurrentNumber();
 
         if (!currentNumber.contains('.')) {
-          if (_expression.isEmpty ||
-              _isOperator(_expression[_expression.length - 1])) {
-            _expression += '0.';
+          if (_timeExpression.isEmpty ||
+              _isOperator(
+                _timeExpression[
+                    _timeExpression.length - 1],
+              )) {
+            _timeExpression += '0.';
           } else {
-            _expression += '.';
+            _timeExpression += '.';
           }
         }
       } else {
-        _expression += value;
+        _timeExpression += value;
       }
 
-      _calculatePreview();
+      _calculateTimePreview();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_expressionScrollController.hasClients) {
-          _expressionScrollController.jumpTo(
-            _expressionScrollController.position.maxScrollExtent,
+        if (_timeExpressionScrollController.hasClients) {
+          _timeExpressionScrollController.jumpTo(
+            _timeExpressionScrollController
+                .position
+                .maxScrollExtent,
           );
         }
       });
     });
   }
 
-  String _currentNumber() {
-    if (_expression.isEmpty) return '';
+  String _timeCurrentNumber() {
+    if (_timeExpression.isEmpty) return '';
 
-    int index = _expression.length - 1;
+    int index = _timeExpression.length - 1;
 
-    while (index >= 0 && !_isOperator(_expression[index])) {
+    while (
+        index >= 0 &&
+        !_isOperator(_timeExpression[index])) {
       index--;
     }
 
-    return _expression.substring(index + 1);
-  }
-
-  bool _isOperator(String value) {
-    return value == '+' ||
-        value == '-' ||
-        value == '×' ||
-        value == '÷';
-  }
-
-  List<String> _tokens(String expression) {
-    final result = <String>[];
-    String number = '';
-
-    for (int i = 0; i < expression.length; i++) {
-      final char = expression[i];
-
-      if (_isOperator(char)) {
-        if (number.isNotEmpty) {
-          result.add(number);
-          number = '';
-        }
-
-        result.add(char);
-      } else {
-        number += char;
-      }
-    }
-
-    if (number.isNotEmpty) {
-      result.add(number);
-    }
-
-    return result;
+    return _timeExpression.substring(index + 1);
   }
 
   int? _parseTime(String value) {
@@ -751,7 +871,9 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     }
 
     final negative = value.startsWith('-');
-    final clean = negative ? value.substring(1) : value;
+    final clean = negative
+        ? value.substring(1)
+        : value;
 
     try {
       if (clean.contains('.')) {
@@ -761,7 +883,8 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
           parts[0].isEmpty ? '0' : parts[0],
         );
 
-        String minuteText = parts.length > 1 ? parts[1] : '0';
+        String minuteText =
+            parts.length > 1 ? parts[1] : '0';
 
         if (minuteText.isEmpty) {
           minuteText = '0';
@@ -782,16 +905,18 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
         return negative ? -total : total;
       }
 
-      return int.parse(clean) * 60 * (negative ? -1 : 1);
+      return int.parse(clean) *
+          60 *
+          (negative ? -1 : 1);
     } catch (_) {
       return null;
     }
   }
 
-  int? _evaluateMinutes(String expression) {
+  int? _evaluateTime(String expression) {
     if (expression.isEmpty) return null;
 
-    final tokens = _tokens(expression);
+    final tokens = _normalTokens(expression);
 
     if (tokens.isEmpty) return null;
 
@@ -811,7 +936,9 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
         } else {
           final value = _parseTime(token);
 
-          if (value == null) return null;
+          if (value == null) {
+            return null;
+          }
 
           numbers.add(value);
         }
@@ -820,7 +947,8 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
       if (numbers.isEmpty) return null;
 
       for (int i = 0; i < operators.length;) {
-        if (operators[i] == '×' || operators[i] == '÷') {
+        if (operators[i] == '×' ||
+            operators[i] == '÷') {
           final left = numbers[i];
           final right = numbers[i + 1];
 
@@ -857,220 +985,44 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     }
   }
 
-  void _calculatePreview() {
-    final value = _evaluateMinutes(_expression);
+  void _calculateTimePreview() {
+    final value = _evaluateTime(_timeExpression);
 
     if (value != null) {
-      _resultMinutes = value;
+      _timeResultMinutes = value;
     } else {
-      _resultMinutes = 0;
+      _timeResultMinutes = 0;
     }
   }
 
-  void _calculateFinal() {
-    final value = _evaluateMinutes(_expression);
+  void _calculateTimeFinal() {
+    final value = _evaluateTime(_timeExpression);
 
     if (value == null) {
       return;
     }
 
-    if (_expression.isNotEmpty) {
-      _history.insert(
+    if (_timeExpression.isNotEmpty) {
+      _timeHistory.insert(
         0,
-        '$_expression = ${_formatTime(value)}',
+        '$_timeExpression = ${_formatTime(value)}',
       );
 
-      if (_history.length > 30) {
-        _history.removeLast();
+      if (_timeHistory.length > 30) {
+        _timeHistory.removeLast();
       }
     }
 
     setState(() {
-      _resultMinutes = value;
+      _timeResultMinutes = value;
     });
   }
 
-  String _formatTime(int totalMinutes) {
-    final negative = totalMinutes < 0;
-    final absolute = totalMinutes.abs();
+  // ============================================================
+  // TIME KEYPAD
+  // ============================================================
 
-    final hours = absolute ~/ 60;
-    final minutes = absolute % 60;
-
-    final result =
-        '$hours ঘণ্টা $minutes মিনিট';
-
-    return negative ? '-$result' : result;
-  }
-
-  String _formatShortTime(int totalMinutes) {
-    final negative = totalMinutes < 0;
-    final absolute = totalMinutes.abs();
-
-    final hours = absolute ~/ 60;
-    final minutes = absolute % 60;
-
-    final result =
-        '${hours.toString()}.${minutes.toString().padLeft(2, '0')}';
-
-    return negative ? '-$result' : result;
-  }
-
-  @override
-  void dispose() {
-    _expressionScrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Time Calculator'),
-        actions: [
-          if (_history.isNotEmpty)
-            IconButton(
-              tooltip: 'History',
-              onPressed: _showHistory,
-              icon: const Icon(
-                Icons.history_rounded,
-                color: Color(0xFFC9A45C),
-              ),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: _display(),
-            ),
-            _quickTools(),
-            _keypad(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _display() {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-      padding: const EdgeInsets.all(18),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: dark
-            ? const Color(0xFF10291F)
-            : const Color(0xFFFFFCF5),
-        border: Border.all(
-          color: const Color(0x44C9A45C),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          SingleChildScrollView(
-            controller: _expressionScrollController,
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              _expression.isEmpty ? '0.00' : _expression,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withValues(alpha: 0.65),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _formatTime(_resultMinutes),
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFFC9A45C),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            _formatShortTime(_resultMinutes),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.color
-                  ?.withValues(alpha: 0.60),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _quickTools() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
-      child: Row(
-        children: [
-          Expanded(
-            child: _toolButton(
-              icon: Icons.today_rounded,
-              title: 'Daily Average',
-              onTap: _showDailyAverage,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _toolButton(
-              icon: Icons.calendar_month_rounded,
-              title: 'Monthly Average',
-              onTap: _showMonthlyAverage,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _toolButton({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(
-        icon,
-        size: 18,
-      ),
-      label: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        side: const BorderSide(
-          color: Color(0x55C9A45C),
-        ),
-        foregroundColor: const Color(0xFFC9A45C),
-      ),
-    );
-  }
-
-  Widget _keypad() {
+  Widget _timeKeypad() {
     final buttons = [
       ['C', '⌫', '÷', '×'],
       ['7', '8', '9', '-'],
@@ -1094,7 +1046,7 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: _button(value),
+                  child: _timeButton(value),
                 ),
               );
             }).toList(),
@@ -1104,16 +1056,15 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     );
   }
 
-  Widget _button(String value) {
+  Widget _timeButton(String value) {
     final operator = _isOperator(value);
-    final action = value == 'C' ||
-        value == '⌫' ||
-        value == '=';
+    final action =
+        value == 'C' || value == '⌫' || value == '=';
 
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: () => _add(value),
+        onPressed: () => _addTime(value),
         style: ElevatedButton.styleFrom(
           backgroundColor: value == '='
               ? const Color(0xFFC9A45C)
@@ -1121,7 +1072,8 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
                   ? const Color(0xFF176B45)
                   : action
                       ? const Color(0xFF294D3E)
-                      : Theme.of(context).brightness == Brightness.dark
+                      : Theme.of(context).brightness ==
+                              Brightness.dark
                           ? const Color(0xFF10291F)
                           : const Color(0xFFFFFCF5),
           foregroundColor: value == '='
@@ -1144,7 +1096,10 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
             color: value == '='
                 ? const Color(0xFF18352A)
                 : (!operator && !action)
-                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    ? Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.color
                     : Colors.white,
           ),
         ),
@@ -1152,28 +1107,162 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     );
   }
 
-  void _showDailyAverage() {
-    _showAverageDialog(
-      title: 'Daily Average',
-      hint: 'মোট সময় লিখুন',
-      days: 1,
+  // ============================================================
+  // OPERATOR
+  // ============================================================
+
+  bool _isOperator(String value) {
+    return value == '+' ||
+        value == '-' ||
+        value == '×' ||
+        value == '÷';
+  }
+
+  // ============================================================
+  // TIME FORMATTING
+  // ============================================================
+
+  String _formatTime(int totalMinutes) {
+    final negative = totalMinutes < 0;
+    final absolute = totalMinutes.abs();
+
+    final hours = absolute ~/ 60;
+    final minutes = absolute % 60;
+
+    final result = '$hours ঘণ্টা $minutes মিনিট';
+
+    return negative ? '-$result' : result;
+  }
+
+  String _formatShortTime(int totalMinutes) {
+    final negative = totalMinutes < 0;
+    final absolute = totalMinutes.abs();
+
+    final hours = absolute ~/ 60;
+    final minutes = absolute % 60;
+
+    final result =
+        '${hours.toString()}.${minutes.toString().padLeft(2, '0')}';
+
+    return negative ? '-$result' : result;
+  }
+
+  // ============================================================
+  // TIME AVERAGE
+  // ============================================================
+
+  void _showTimeDailyAverage() {
+    if (_timeExpression.isEmpty) {
+      _showMessage(
+        'আগে Time Calculator-এ একটি হিসাব করুন।',
+      );
+      return;
+    }
+
+    final value = _evaluateTime(_timeExpression);
+
+    if (value == null) {
+      _showMessage(
+        'আগে একটি সঠিক Time Calculation করুন।',
+      );
+      return;
+    }
+
+    _showDaysDialog(
+      title: 'দৈনিক গড়',
+      totalMinutes: value,
+      defaultDays: 1,
     );
   }
 
-  void _showMonthlyAverage() {
-    _showAverageDialog(
-      title: 'Monthly Average',
-      hint: 'মোট সময় লিখুন',
-      days: 30,
+  void _showTimeMonthlyAverage() {
+    if (_timeExpression.isEmpty) {
+      _showMessage(
+        'আগে Time Calculator-এ একটি হিসাব করুন।',
+      );
+      return;
+    }
+
+    final value = _evaluateTime(_timeExpression);
+
+    if (value == null) {
+      _showMessage(
+        'আগে একটি সঠিক Time Calculation করুন।',
+      );
+      return;
+    }
+
+    _showDaysDialog(
+      title: 'মাসিক গড়',
+      totalMinutes: value,
+      defaultDays: 30,
     );
   }
 
-  void _showAverageDialog({
+  // ============================================================
+  // NORMAL AVERAGE
+  // ============================================================
+
+  void _showNormalDailyAverage() {
+    if (_normalExpression.isEmpty) {
+      _showMessage(
+        'আগে Normal Calculator-এ একটি হিসাব করুন।',
+      );
+      return;
+    }
+
+    final value = _evaluateNormal(_normalExpression);
+
+    if (value == null) {
+      _showMessage(
+        'আগে একটি সঠিক Normal Calculation করুন।',
+      );
+      return;
+    }
+
+    _showNumberDaysDialog(
+      title: 'দৈনিক গড়',
+      totalValue: value,
+      defaultDays: 1,
+    );
+  }
+
+  void _showNormalMonthlyAverage() {
+    if (_normalExpression.isEmpty) {
+      _showMessage(
+        'আগে Normal Calculator-এ একটি হিসাব করুন।',
+      );
+      return;
+    }
+
+    final value = _evaluateNormal(_normalExpression);
+
+    if (value == null) {
+      _showMessage(
+        'আগে একটি সঠিক Normal Calculation করুন।',
+      );
+      return;
+    }
+
+    _showNumberDaysDialog(
+      title: 'মাসিক গড়',
+      totalValue: value,
+      defaultDays: 30,
+    );
+  }
+
+  // ============================================================
+  // TIME DAYS DIALOG
+  // ============================================================
+
+  void _showDaysDialog({
     required String title,
-    required String hint,
-    required int days,
+    required int totalMinutes,
+    required int defaultDays,
   }) {
-    final controller = TextEditingController();
+    final controller = TextEditingController(
+      text: defaultDays.toString(),
+    );
 
     showDialog<void>(
       context: context,
@@ -1182,35 +1271,40 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
           title: Text(title),
           content: TextField(
             controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              helperText: 'উদাহরণ: 10.30',
-              border: const OutlineInputBorder(),
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'কত দিনের হিসাব?',
+              hintText: 'উদাহরণ: 5',
+              border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
               child: const Text('বাতিল'),
             ),
             ElevatedButton(
               onPressed: () {
-                final minutes = _parseTime(controller.text.trim());
+                final days =
+                    int.tryParse(controller.text.trim());
 
-                if (minutes == null || minutes < 0) {
+                if (days == null || days <= 0) {
                   return;
                 }
 
-                final average = minutes ~/ days;
+                final average = totalMinutes ~/ days;
 
                 Navigator.pop(dialogContext);
 
                 _showResultDialog(
                   title: title,
                   result: _formatTime(average),
+                  extra:
+                      'মোট সময়: ${_formatTime(totalMinutes)}\n'
+                      'দিন: $days',
                 );
               },
               child: const Text('হিসাব'),
@@ -1221,26 +1315,111 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     );
   }
 
+  // ============================================================
+  // NORMAL DAYS DIALOG
+  // ============================================================
+
+  void _showNumberDaysDialog({
+    required String title,
+    required double totalValue,
+    required int defaultDays,
+  }) {
+    final controller = TextEditingController(
+      text: defaultDays.toString(),
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'কত দিনের হিসাব?',
+              hintText: 'উদাহরণ: 5',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('বাতিল'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final days =
+                    int.tryParse(controller.text.trim());
+
+                if (days == null || days <= 0) {
+                  return;
+                }
+
+                final average = totalValue / days;
+
+                Navigator.pop(dialogContext);
+
+                _showResultDialog(
+                  title: title,
+                  result: _formatNumber(average),
+                  extra:
+                      'মোট: ${_formatNumber(totalValue)}\n'
+                      'দিন: $days',
+                );
+              },
+              child: const Text('হিসাব'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // RESULT DIALOG
+  // ============================================================
+
   void _showResultDialog({
     required String title,
     required String result,
+    required String extra,
   }) {
     showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text(title),
-          content: Text(
-            result,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFFC9A45C),
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                result,
+                style: const TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFC9A45C),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                extra,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+              },
               child: const Text('ঠিক আছে'),
             ),
           ],
@@ -1249,14 +1428,89 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
     );
   }
 
-  void _showHistory() {
+  // ============================================================
+  // MESSAGE
+  // ============================================================
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ============================================================
+  // NORMAL HISTORY
+  // ============================================================
+
+  void _showNormalHistory() {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Calculation History',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _normalHistory.length,
+                    itemBuilder: (_, index) {
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.history_rounded,
+                          color: Color(0xFFC9A45C),
+                        ),
+                        title: Text(
+                          _normalHistory[index],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // TIME HISTORY
+  // ============================================================
+
+  void _showTimeHistory() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              20,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1271,14 +1525,16 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
                 Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
-                    itemCount: _history.length,
+                    itemCount: _timeHistory.length,
                     itemBuilder: (_, index) {
                       return ListTile(
                         leading: const Icon(
                           Icons.history_rounded,
                           color: Color(0xFFC9A45C),
                         ),
-                        title: Text(_history[index]),
+                        title: Text(
+                          _timeHistory[index],
+                        ),
                       );
                     },
                   ),
@@ -1289,5 +1545,16 @@ class _TimeCalculatorPageState extends State<TimeCalculatorPage> {
         );
       },
     );
+  }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
+
+  @override
+  void dispose() {
+    _timeExpressionScrollController.dispose();
+    _normalExpressionScrollController.dispose();
+    super.dispose();
   }
 }
