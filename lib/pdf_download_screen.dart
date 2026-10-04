@@ -45,8 +45,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     return file.exists();
   }
 
-  // Google Drive-এর যেকোনো সাধারণ Share/View link
-  // থেকে File ID বের করে Download URL তৈরি করে।
+  // Google Drive View/Share URL থেকে সরাসরি Download URL তৈরি করে।
   String convertDriveUrl(String url) {
     final uri = Uri.tryParse(url);
 
@@ -165,7 +164,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
 
       file = await localFile;
 
-      // আগের অসম্পূর্ণ PDF থাকলে আগে মুছে ফেলি।
+      // আগের অসম্পূর্ণ/পুরোনো PDF থাকলে মুছে দিই।
       if (await file.exists()) {
         await file.delete();
       }
@@ -189,16 +188,21 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
         await sink.close();
       }
 
-      // File সত্যিই তৈরি হয়েছে কি না যাচাই।
+      // File তৈরি হয়েছে কি না যাচাই।
       if (!await file.exists()) {
-        throw Exception('PDF file তৈরি করা যায়নি।');
+        throw Exception(
+          'PDF file তৈরি করা যায়নি।',
+        );
       }
 
       final fileSize = await file.length();
 
       if (fileSize == 0) {
         await file.delete();
-        throw Exception('Download করা PDF খালি।');
+
+        throw Exception(
+          'Download করা PDF খালি।',
+        );
       }
 
       if (!mounted) return;
@@ -236,7 +240,6 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
             'Download করতে সমস্যা হয়েছে।\n$e',
           ),
         ),
-        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -289,23 +292,17 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
                 context,
                 dark: dark,
               ),
-
               const SizedBox(height: 20),
-
-              if (downloading) _downloadProgress(context),
-
+              if (downloading)
+                _downloadProgress(context),
               if (!downloading)
                 _actionSection(
                   context,
                   downloaded: downloaded,
                 ),
-
               const SizedBox(height: 22),
-
               _offlineInfo(context),
-
               const SizedBox(height: 28),
-
               _bottomDecoration(context),
             ],
           );
