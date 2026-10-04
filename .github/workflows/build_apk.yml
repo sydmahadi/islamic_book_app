@@ -27,7 +27,7 @@ jobs:
       - name: Generate Android Project
         run: flutter create --platforms=android --project-name islamic_book_app .
 
-      # Find logo.png anywhere in the repository.
+      # Find logo.png.
       - name: Find App Logo
         shell: bash
         run: |
@@ -40,9 +40,15 @@ jobs:
           fi
 
           echo "Logo found at: $LOGO_PATH"
-          cp "$LOGO_PATH" ./logo.png
 
-      # Set the application name and Internet permission.
+          # If logo.png is already in the root folder, do nothing.
+          if [ "$LOGO_PATH" != "./logo.png" ]; then
+            cp "$LOGO_PATH" ./logo.png
+          fi
+
+          echo "App logo is ready."
+
+      # Configure Android application name and Internet permission.
       - name: Configure Android App
         shell: bash
         run: |
@@ -53,10 +59,10 @@ jobs:
             exit 1
           fi
 
-          # Set launcher application name.
+          # Set Android launcher application name.
           sed -i 's/android:label="[^"]*"/android:label="সদস্য সিলেবাসের বই"/' "$MANIFEST"
 
-          # Add Internet permission if it does not already exist.
+          # Add Internet permission if missing.
           if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
             sed -i '/<manifest/a\
               <uses-permission android:name="android.permission.INTERNET"/>' "$MANIFEST"
@@ -68,7 +74,7 @@ jobs:
           echo "Internet permission:"
           grep 'android.permission.INTERNET' "$MANIFEST"
 
-      # Install launcher icon generator.
+      # Add launcher icon package.
       - name: Add Launcher Icon Package
         run: flutter pub add --dev flutter_launcher_icons
 
@@ -87,21 +93,25 @@ jobs:
           echo "Launcher icon configuration:"
           cat flutter_launcher_icons.yaml
 
-      # Generate Android launcher icons from logo.png.
-      - name: Generate App Icon
-        run: dart run flutter_launcher_icons
-
+      # Get Flutter dependencies.
       - name: Flutter Pub Get
         run: flutter pub get
 
+      # Generate Android launcher icons.
+      - name: Generate App Icon
+        run: dart run flutter_launcher_icons
+
+      # Analyze project.
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
+      # Build release APK.
       - name: Build Release APK
         run: flutter build apk --release
 
+      # Upload APK.
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: সদস্য সিলেবাসের বই 
+          name: member-syllabus-books
           path: build/app/outputs/flutter-apk/app-release.apk
