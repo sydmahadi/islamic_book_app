@@ -13,12 +13,16 @@ class BookListScreen extends StatelessWidget {
 
   IconData _categoryIcon() {
     switch (category) {
-      case 'আবেদনপত্রের আগে':
+      case 'আবেদনপত্রের কন্টাক্টের আগে':
         return Icons.edit_document;
-      case 'প্রশ্নপত্রের আগে':
+      case 'প্রশ্নপত্রের কন্টাক্টের আগে':
         return Icons.quiz_rounded;
-      case 'শপথের আগে':
+      case 'শপথ কন্টাক্টের আগে':
         return Icons.workspace_premium_rounded;
+      case 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)':
+        return Icons.workspace_premium_rounded;
+      case 'হাদীস গ্রন্থ':
+        return Icons.workspace_premium_rounded; 
       default:
         return Icons.menu_book_rounded;
     }
@@ -26,11 +30,15 @@ class BookListScreen extends StatelessWidget {
 
   String _categoryDescription() {
     switch (category) {
-      case 'আবেদনপত্রের আগে':
+      case 'আবেদনপত্রের কন্টাক্টের আগে':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
-      case 'প্রশ্নপত্রের আগে':
+      case 'প্রশ্নপত্রের কন্টাক্টের আগে':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
-      case 'শপথের আগে':
+      case 'শপথ কন্টাক্টের আগে':
+        return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+      case 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)':
+        return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
+      case 'হাদীস গ্রন্থ':
         return 'এই বিভাগের প্রয়োজনীয় বইগুলো';
       default:
         return 'এই বিভাগের বইগুলো';
