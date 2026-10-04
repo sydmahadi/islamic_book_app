@@ -175,7 +175,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ইসলামিক বই',
+                  ' সদস্য সিলেবাসের বই',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.2,
@@ -183,7 +183,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'পড়ুন • শিখুন • নিজেকে গড়ুন',
+                  'يَرْفَعِ اللَّهُ الَّذِينَ آمَنُوا مِنكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context)
                             .textTheme
