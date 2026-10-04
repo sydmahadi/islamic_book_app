@@ -63,7 +63,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   }
 
   Future<void> _saveCurrentPage(int page) async {
-    if (page < 1) return;
+    if (page < 1) {
+      return;
+    }
 
     final prefs = await SharedPreferences.getInstance();
 
@@ -105,7 +107,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     PdfDocument document,
     PdfViewerController controller,
   ) {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final count = controller.pageCount;
 
@@ -126,7 +130,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       Future.delayed(
         const Duration(milliseconds: 250),
         () {
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
 
           controller.goToPage(
             pageNumber: _currentPage,
@@ -141,7 +147,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _currentPage = pageNumber;
@@ -188,7 +196,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       return;
     }
 
-    final controller = TextEditingController(
+    final inputController = TextEditingController(
       text: _currentPage.toString(),
     );
 
@@ -200,7 +208,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             'পৃষ্ঠা নির্বাচন করুন',
           ),
           content: TextField(
-            controller: controller,
+            controller: inputController,
             autofocus: true,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
@@ -213,7 +221,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             onSubmitted: (_) {
               _submitPageInput(
                 dialogContext,
-                controller,
+                inputController,
               );
             },
           ),
@@ -228,7 +236,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               onPressed: () {
                 _submitPageInput(
                   dialogContext,
-                  controller,
+                  inputController,
                 );
               },
               child: const Text('যান'),
@@ -237,7 +245,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         );
       },
     ).whenComplete(
-      controller.dispose,
+      inputController.dispose,
     );
   }
 
@@ -257,6 +265,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         ),
       );
+
       return;
     }
 
@@ -267,7 +276,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
   @override
   void dispose() {
-    _controller.dispose();
     super.dispose();
   }
 
@@ -361,7 +369,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               ),
             ),
 
-            // Top page indicator
             Positioned(
               top: 12,
               left: 12,
@@ -409,7 +416,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               ),
             ),
 
-            // Right side page navigation
             Positioned(
               top: 75,
               right: 7,
@@ -419,7 +425,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               ),
             ),
 
-            // Bottom controls
             Positioned(
               left: 12,
               right: 12,
@@ -499,8 +504,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     }
 
     final max = _pageCount.toDouble();
+
     final value = _currentPage
-        .clamp(1, _pageCount)
+        .clamp(
+          1,
+          _pageCount,
+        )
         .toDouble();
 
     return RotatedBox(
@@ -509,9 +518,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         data: SliderTheme.of(context).copyWith(
           trackHeight: 4,
           activeTrackColor: const Color(0xFFC9A45C),
-          inactiveTrackColor: dark
-              ? const Color(0x445A806E)
-              : const Color(0x445A806E),
+          inactiveTrackColor: const Color(0x445A806E),
           thumbColor: const Color(0xFFC9A45C),
           overlayColor: const Color(0x22C9A45C),
           thumbShape: const RoundSliderThumbShape(
