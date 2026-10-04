@@ -1,10 +1,9 @@
+```dart
 import 'package:flutter/material.dart';
 
 import 'about_screen.dart';
 import 'book_list_screen.dart';
-import 'books.dart';
 import 'calculator_screen.dart';
-import 'pdf_download_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final VoidCallback onToggleTheme;
@@ -69,9 +68,9 @@ class HomeScreen extends StatelessWidget {
             _categoryCard(
               context,
               icon: Icons.edit_document,
-              title: 'আবেদনপত্রের আগে',
+              title: 'আবেদনপত্রের কন্টাক্টের আগে',
               subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'আবেদনপত্রের আগে',
+              category: 'আবেদনপত্রের কন্টাক্টের আগে',
               number: '০১',
             ),
 
@@ -79,9 +78,9 @@ class HomeScreen extends StatelessWidget {
             _categoryCard(
               context,
               icon: Icons.quiz_rounded,
-              title: 'প্রশ্নপত্রের আগে',
+              title: 'প্রশ্নপত্রের কন্টাক্টের আগে',
               subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'প্রশ্নপত্রের আগে',
+              category: 'প্রশ্নপত্রের কন্টাক্টের আগে',
               number: '০২',
             ),
 
@@ -89,18 +88,33 @@ class HomeScreen extends StatelessWidget {
             _categoryCard(
               context,
               icon: Icons.workspace_premium_rounded,
-              title: 'শপথের আগে',
+              title: 'শপথ কন্টাক্টের আগে',
               subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'শপথের আগে',
+              category: 'শপথ কন্টাক্টের আগে',
               number: '০৩',
             ),
 
-            const SizedBox(height: 12),
+            // Category 04
+            _categoryCard(
+              context,
+              icon: Icons.menu_book_rounded,
+              title: 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)',
+              subtitle: 'এই বিভাগের বইসমূহ',
+              category: 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)',
+              number: '০৪',
+            ),
 
-            // বিশেষ বই
-            _specialBookCard(context),
+            // Category 05
+            _categoryCard(
+              context,
+              icon: Icons.auto_stories_rounded,
+              title: 'হাদীস গ্রন্থ',
+              subtitle: 'এই বিভাগের বইসমূহ',
+              category: 'হাদীস গ্রন্থ',
+              number: '০৫',
+            ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 18),
 
             // প্রয়োজনীয় টুল
             _sectionTitle(
@@ -283,94 +297,6 @@ class HomeScreen extends StatelessWidget {
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
-                color: Color(0xFFC9A45C),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _specialBookCard(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [
-                  Color(0xFF241F12),
-                  Color(0xFF151C17),
-                ]
-              : const [
-                  Color(0xFFFFF5D9),
-                  Color(0xFFFFFCF5),
-                ],
-        ),
-        border: Border.all(
-          color: const Color(0x66C9A45C),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PdfDownloadScreen(
-                book: renaissanceBook,
-              ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC9A45C),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.auto_stories_rounded,
-                  color: Color(0xFF18352A),
-                  size: 29,
-                ),
-              ),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'রেনেসাঁর ডাক',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'বিশেষ বই',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFC9A45C),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 17,
                 color: Color(0xFFC9A45C),
               ),
             ],
