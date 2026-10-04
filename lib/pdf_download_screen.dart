@@ -45,6 +45,44 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     return file.exists();
   }
 
+  // Google Drive-এর যেকোনো সাধারণ Share/View link
+  // থেকে File ID বের করে Download URL তৈরি করে।
+  String convertDriveUrl(String url) {
+    final uri = Uri.tryParse(url);
+
+    if (uri == null) {
+      return url;
+    }
+
+    if (!uri.host.contains('drive.google.com')) {
+      return url;
+    }
+
+    // Example:
+    // https://drive.google.com/file/d/FILE_ID/view
+    final segments = uri.pathSegments;
+
+    final dIndex = segments.indexOf('d');
+
+    if (dIndex != -1 && dIndex + 1 < segments.length) {
+      final fileId = segments[dIndex + 1];
+
+      return 'https://drive.usercontent.google.com/download'
+          '?id=$fileId&export=download&confirm=t';
+    }
+
+    // Example:
+    // https://drive.google.com/open?id=FILE_ID
+    final queryId = uri.queryParameters['id'];
+
+    if (queryId != null && queryId.isNotEmpty) {
+      return 'https://drive.usercontent.google.com/download'
+          '?id=$queryId&export=download&confirm=t';
+    }
+
+    return url;
+  }
+
   Future<void> openBook() async {
     final file = await localFile;
 
@@ -56,6 +94,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
           content: Text('বইটি আগে Download করুন।'),
         ),
       );
+
       return;
     }
 
@@ -72,36 +111,11 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
     );
   }
 
-  String convertDriveUrl(String url) {
-    final uri = Uri.tryParse(url);
-
-    if (uri == null) {
-      return url;
-    }
-
-    if (uri.host.contains('drive.google.com')) {
-      final segments = uri.pathSegments;
-
-      final dIndex = segments.indexOf('d');
-
-      if (dIndex != -1 && dIndex + 1 < segments.length) {
-        final fileId = segments[dIndex + 1];
-
-        return 'https://drive.google.com/uc?export=download&id=$fileId';
-      }
-
-      final id = uri.queryParameters['id'];
-
-      if (id != null && id.isNotEmpty) {
-        return 'https://drive.google.com/uc?export=download&id=$id';
-      }
-    }
-
-    return url;
-  }
-
   Future<void> downloadBook() async {
-    if (widget.book.driveUrl.contains('PASTE_')) {
+    if (widget.book.driveUrl.trim().isEmpty ||
+        widget.book.driveUrl.contains('PASTE_')) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -109,6 +123,11 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
           ),
         ),
       );
+
+      return;
+    }
+
+    if (downloading) {
       return;
     }
 
@@ -117,41 +136,70 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
       progress = 0;
     });
 
+    File? file;
+
     try {
-      final url = convertDriveUrl(widget.book.driveUrl);
+      final downloadUrl = convertDriveUrl(
+        widget.book.driveUrl.trim(),
+      );
 
       final request = http.Request(
         'GET',
-        Uri.parse(url),
+        Uri.parse(downloadUrl),
       );
+
+      request.headers.addAll({
+        'Accept': 'application/pdf,application/octet-stream,*/*',
+        'User-Agent': 'Mozilla/5.0',
+      });
 
       final response = await request.send();
 
       if (response.statusCode != 200) {
         throw Exception(
-          'Download failed: ${response.statusCode}',
+          'Server error: ${response.statusCode}',
         );
       }
 
       final total = response.contentLength ?? 0;
 
-      final file = await localFile;
+      file = await localFile;
+
+      // আগের অসম্পূর্ণ PDF থাকলে আগে মুছে ফেলি।
+      if (await file.exists()) {
+        await file.delete();
+      }
+
       final sink = file.openWrite();
 
       int received = 0;
 
-      await for (final chunk in response.stream) {
-        sink.add(chunk);
-        received += chunk.length;
+      try {
+        await for (final chunk in response.stream) {
+          sink.add(chunk);
+          received += chunk.length;
 
-        if (total > 0 && mounted) {
-          setState(() {
-            progress = received / total;
-          });
+          if (total > 0 && mounted) {
+            setState(() {
+              progress = received / total;
+            });
+          }
         }
+      } finally {
+        await sink.close();
       }
 
-      await sink.close();
+      // File সত্যিই তৈরি হয়েছে কি না যাচাই।
+      if (!await file.exists()) {
+        throw Exception('PDF file তৈরি করা যায়নি।');
+      }
+
+      final fileSize = await file.length();
+
+      if (fileSize == 0) {
+        await file.delete();
+        throw Exception('Download করা PDF খালি।');
+      }
 
       if (!mounted) return;
 
@@ -168,19 +216,27 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
         ),
       );
     } catch (e) {
+      // Download ব্যর্থ হলে অসম্পূর্ণ file মুছে দিই।
+      try {
+        if (file != null && await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+
       setState(() {
         downloading = false;
         progress = 0;
       });
 
-      if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Download করতে সমস্যা হয়েছে: $e',
+            'Download করতে সমস্যা হয়েছে।\n$e',
           ),
         ),
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -194,7 +250,9 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
 
     if (!mounted) return;
 
-    setState(() {});
+    setState(() {
+      progress = 0;
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -234,8 +292,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
 
               const SizedBox(height: 20),
 
-              if (downloading)
-                _downloadProgress(context),
+              if (downloading) _downloadProgress(context),
 
               if (!downloading)
                 _actionSection(
@@ -329,9 +386,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 22),
-
           Text(
             widget.book.title,
             textAlign: TextAlign.center,
@@ -342,9 +397,7 @@ class _PdfDownloadScreenState extends State<PdfDownloadScreen> {
               height: 1.3,
             ),
           ),
-
           const SizedBox(height: 8),
-
           const Text(
             'ইসলামিক বই',
             style: TextStyle(
