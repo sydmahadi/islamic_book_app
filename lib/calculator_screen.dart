@@ -34,7 +34,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   String _timeExpression = '';
   String _timeDisplayResult = '0';
 
-  // সর্বশেষ সম্পন্ন Time calculation-এর result
   int? _lastTimeResultMinutes;
 
   List<String> _timeHistory = [];
@@ -46,7 +45,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   String _normalExpression = '';
   String _normalDisplayResult = '0';
 
-  // সর্বশেষ সম্পন্ন Normal calculation-এর result
   double? _lastNormalResult;
 
   List<String> _normalHistory = [];
@@ -131,25 +129,19 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Color get _background =>
       _isDarkMode ? darkBackground : lightBackground;
 
-  Color get _cardColor =>
-      _isDarkMode
-          ? const Color(0xFF183A2D)
-          : const Color(0xFFFFFFFF);
+  Color get _cardColor => _isDarkMode
+      ? const Color(0xFF183A2D)
+      : const Color(0xFFFFFFFF);
 
-  Color get _displayColor =>
-      _isDarkMode
-          ? const Color(0xFF0C2118)
-          : const Color(0xFFF3EFE4);
+  Color get _displayColor => _isDarkMode
+      ? const Color(0xFF0C2118)
+      : const Color(0xFFF3EFE4);
 
   Color get _textColor =>
-      _isDarkMode
-          ? Colors.white
-          : const Color(0xFF1A1A1A);
+      _isDarkMode ? Colors.white : const Color(0xFF1A1A1A);
 
   Color get _secondaryTextColor =>
-      _isDarkMode
-          ? Colors.white70
-          : const Color(0xFF666666);
+      _isDarkMode ? Colors.white70 : const Color(0xFF666666);
 
   // ============================================================
   // MAIN BUILD
@@ -314,7 +306,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Widget _buildTimeDisplay() {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(
+        minHeight: 135,
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        20,
+        18,
+        20,
+      ),
       decoration: BoxDecoration(
         color: _displayColor,
         borderRadius: BorderRadius.circular(18),
@@ -323,6 +323,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           SizedBox(
@@ -331,19 +332,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               scrollDirection: Axis.horizontal,
               reverse: true,
               child: Text(
-                _timeExpression.isEmpty
-                    ? '0'
-                    : _timeExpression,
+                _timeExpression.isEmpty ? '0' : _timeExpression,
                 maxLines: 1,
                 style: TextStyle(
                   color: _secondaryTextColor,
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: SingleChildScrollView(
@@ -354,7 +353,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 maxLines: 1,
                 style: TextStyle(
                   color: gold,
-                  fontSize: 31,
+                  fontSize: 38,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -424,7 +423,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Widget _buildNormalDisplay() {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(
+        minHeight: 135,
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        20,
+        18,
+        20,
+      ),
       decoration: BoxDecoration(
         color: _displayColor,
         borderRadius: BorderRadius.circular(18),
@@ -433,6 +440,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         ),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           SizedBox(
@@ -447,13 +455,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 maxLines: 1,
                 style: TextStyle(
                   color: _secondaryTextColor,
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: SingleChildScrollView(
@@ -464,7 +472,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 maxLines: 1,
                 style: TextStyle(
                   color: gold,
-                  fontSize: 31,
+                  fontSize: 38,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -571,6 +579,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Column(
         children: [
+          // ROW 1
           Expanded(
             child: Row(
               children: [
@@ -621,6 +630,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               ],
             ),
           ),
+
+          // ROW 2
           Expanded(
             child: Row(
               children: [
@@ -656,6 +667,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               ],
             ),
           ),
+
+          // ROW 3
           Expanded(
             child: Row(
               children: [
@@ -691,6 +704,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               ],
             ),
           ),
+
+          // ROW 4
+          // এখানে আর '=' নেই।
           Expanded(
             child: Row(
               children: [
@@ -713,15 +729,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       : _addNormalNumber('3'),
                 ),
                 _key(
-                  '=',
-                  type: _KeyType.equals,
-                  onTap: isTime
-                      ? _calculateTime
-                      : _calculateNormal,
+                  '.',
+                  onTap: () => isTime
+                      ? _addTimeNumber('.')
+                      : _addNormalNumber('.'),
                 ),
               ],
             ),
           ),
+
+          // ROW 5
+          // একমাত্র '=' button এখানে।
           Expanded(
             child: Row(
               children: [
@@ -733,13 +751,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       : _addNormalNumber('0'),
                 ),
                 _key(
-                  '.',
-                  onTap: () => isTime
-                      ? _addTimeNumber('.')
-                      : _addNormalNumber('.'),
-                ),
-                _key(
                   '=',
+                  flex: 2,
                   type: _KeyType.equals,
                   onTap: isTime
                       ? _calculateTime
@@ -779,8 +792,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       background = _isDarkMode
           ? const Color(0xFF1C4636)
           : const Color(0xFFEDE7D9);
-    } else if (type == _KeyType.clear ||
-        type == _KeyType.delete) {
+    } else if (type == _KeyType.clear || type == _KeyType.delete) {
       background = _isDarkMode
           ? const Color(0xFF1A3B2E)
           : const Color(0xFFF0EBDF);
@@ -876,27 +888,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // TIME PARSER
   // ============================================================
 
-  /// Time format:
-  ///
-  /// 1.20  = 1 hour 20 minutes
-  /// 2.30  = 2 hours 30 minutes
-  /// 200.20 = 200 hours 20 minutes
-  ///
-  /// Minute অংশ 60-এর বেশি হলেও invalid হবে না।
-  ///
-  /// 1.60 = 2 hours
-  /// 1.75 = 2 hours 15 minutes
-  /// 2.90 = 3 hours 30 minutes
-  ///
-  /// Extra minutes automatically hour-এ carry হবে।
   int? _parseTime(String value) {
     if (value.isEmpty || value == '-') {
       return null;
     }
 
     final negative = value.startsWith('-');
-    final clean =
-        negative ? value.substring(1) : value;
+    final clean = negative ? value.substring(1) : value;
 
     if (clean.isEmpty) {
       return null;
@@ -910,44 +908,31 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           parts[0].isEmpty ? '0' : parts[0],
         );
 
-        String minuteText =
-            parts.length > 1 ? parts[1] : '0';
+        String minuteText = parts.length > 1 ? parts[1] : '0';
 
         if (minuteText.isEmpty) {
           minuteText = '0';
         }
 
-        // HH.MM format:
-        // decimal-এর প্রথম দুই digit minute হিসেবে ধরা হবে।
         if (minuteText.length > 2) {
           minuteText = minuteText.substring(0, 2);
         }
 
-        // আগের behavior বজায়:
-        // 1.6 = 1.60 = 2 ঘণ্টা
         if (minuteText.length == 1) {
           minuteText = '${minuteText}0';
         }
 
         final minutes = int.parse(minuteText);
 
-        // গুরুত্বপূর্ণ:
-        // minutes >= 60 হলে আর null করা হচ্ছে না।
-        // Total minutes থেকে automatic carry হবে।
-        final totalMinutes =
-            (hours * 60) + minutes;
+        final totalMinutes = (hours * 60) + minutes;
 
-        return negative
-            ? -totalMinutes
-            : totalMinutes;
+        return negative ? -totalMinutes : totalMinutes;
       }
 
       final hours = int.parse(clean);
       final totalMinutes = hours * 60;
 
-      return negative
-          ? -totalMinutes
-          : totalMinutes;
+      return negative ? -totalMinutes : totalMinutes;
     } catch (_) {
       return null;
     }
@@ -958,8 +943,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   List<String> _timeTokens(String expression) {
-    final normalized =
-        expression.replaceAll(' ', '');
+    final normalized = expression.replaceAll(' ', '');
 
     final tokens = <String>[];
     String number = '';
@@ -976,8 +960,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         }
 
         if (char == '-' &&
-            (tokens.isEmpty ||
-                '+-×÷'.contains(tokens.last))) {
+            (tokens.isEmpty || '+-×÷'.contains(tokens.last))) {
           number = '-';
         } else {
           tokens.add(char);
@@ -1025,7 +1008,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return null;
     }
 
-    // × এবং ÷ আগে
     final newValues = <int>[];
     final newOperators = <String>[];
 
@@ -1052,7 +1034,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     newValues.add(current);
 
-    // তারপর + এবং -
     int result = newValues[0];
 
     for (int i = 0; i < newOperators.length; i++) {
@@ -1087,8 +1068,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Future<void> _calculateTime() async {
     if (_timeExpression.isEmpty) return;
 
-    final result =
-        _evaluateTime(_timeExpression);
+    final result = _evaluateTime(_timeExpression);
 
     if (result == null) {
       setState(() {
@@ -1099,27 +1079,19 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
 
-    final formatted =
-        _formatTime(result);
+    final formatted = _formatTime(result);
 
     setState(() {
       _timeDisplayResult = formatted;
-
-      // সর্বশেষ completed result সংরক্ষণ
       _lastTimeResultMinutes = result;
     });
 
-    final historyText =
-        '$_timeExpression = $formatted';
+    final historyText = '$_timeExpression = $formatted';
 
-    _timeHistory.insert(
-      0,
-      historyText,
-    );
+    _timeHistory.insert(0, historyText);
 
     if (_timeHistory.length > 30) {
-      _timeHistory =
-          _timeHistory.take(30).toList();
+      _timeHistory = _timeHistory.take(30).toList();
     }
 
     await _saveTimeHistory();
@@ -1130,17 +1102,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   String _formatTime(int totalMinutes) {
-    final negative =
-        totalMinutes < 0;
+    final negative = totalMinutes < 0;
+    final absolute = totalMinutes.abs();
 
-    final absolute =
-        totalMinutes.abs();
-
-    final hours =
-        absolute ~/ 60;
-
-    final minutes =
-        absolute % 60;
+    final hours = absolute ~/ 60;
+    final minutes = absolute % 60;
 
     String result;
 
@@ -1149,13 +1115,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     } else if (minutes == 0) {
       result = '$hours ঘণ্টা';
     } else {
-      result =
-          '$hours ঘণ্টা $minutes মিনিট';
+      result = '$hours ঘণ্টা $minutes মিনিট';
     }
 
-    return negative
-        ? '-$result'
-        : result;
+    return negative ? '-$result' : result;
   }
 
   // ============================================================
@@ -1172,8 +1135,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     _showDaysDialog(
       title: 'দৈনিক গড়',
-      totalMinutes:
-          _lastTimeResultMinutes!,
+      totalMinutes: _lastTimeResultMinutes!,
     );
   }
 
@@ -1191,8 +1153,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     _showDaysDialog(
       title: 'মাসিক গড়',
-      totalMinutes:
-          _lastTimeResultMinutes!,
+      totalMinutes: _lastTimeResultMinutes!,
     );
   }
 
@@ -1204,8 +1165,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     required String title,
     required int totalMinutes,
   }) {
-    final controller =
-        TextEditingController();
+    final controller = TextEditingController();
 
     showDialog(
       context: context,
@@ -1220,17 +1180,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             ),
           ),
           content: Column(
-            mainAxisSize:
-                MainAxisSize.min,
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'সর্বশেষ হিসাব: ${_formatTime(totalMinutes)}',
                 style: TextStyle(
                   color: gold,
-                  fontWeight:
-                      FontWeight.w600,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 14),
@@ -1244,32 +1201,24 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: controller,
-                keyboardType:
-                    TextInputType.number,
+                keyboardType: TextInputType.number,
                 autofocus: true,
                 style: TextStyle(
                   color: _textColor,
                 ),
-                decoration:
-                    InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'যেমন: 5',
                   hintStyle: TextStyle(
-                    color:
-                        _secondaryTextColor,
+                    color: _secondaryTextColor,
                   ),
                   suffixText: 'দিন',
-                  suffixStyle:
-                      TextStyle(
+                  suffixStyle: TextStyle(
                     color: gold,
                   ),
                   filled: true,
-                  fillColor:
-                      _displayColor,
-                  border:
-                      OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius
-                            .circular(12),
+                  fillColor: _displayColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -1278,53 +1227,40 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
               },
               child: Text(
                 'বাতিল',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
             ),
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(
+              style: ElevatedButton.styleFrom(
                 backgroundColor: green,
-                foregroundColor:
-                    Colors.white,
+                foregroundColor: Colors.white,
               ),
               onPressed: () {
-                final days =
-                    int.tryParse(
+                final days = int.tryParse(
                   controller.text.trim(),
                 );
 
-                if (days == null ||
-                    days <= 0) {
+                if (days == null || days <= 0) {
                   return;
                 }
 
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
 
-                final average =
-                    totalMinutes /
-                        days;
+                final average = totalMinutes / days;
 
                 _showTimeAverageResult(
                   title: title,
-                  averageMinutes:
-                      average,
+                  averageMinutes: average,
                   days: days,
                 );
               },
-              child:
-                  const Text('হিসাব করুন'),
+              child: const Text('হিসাব করুন'),
             ),
           ],
         );
@@ -1337,8 +1273,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     required double averageMinutes,
     required int days,
   }) {
-    final roundedMinutes =
-        averageMinutes.round();
+    final roundedMinutes = averageMinutes.round();
 
     showDialog(
       context: context,
@@ -1349,41 +1284,33 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             title,
             style: TextStyle(
               color: _textColor,
-              fontWeight:
-                  FontWeight.bold,
+              fontWeight: FontWeight.bold,
             ),
           ),
           content: Column(
-            mainAxisSize:
-                MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'প্রতি দিন',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                _formatTime(
-                  roundedMinutes,
-                ),
-                textAlign:
-                    TextAlign.center,
+                _formatTime(roundedMinutes),
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: gold,
                   fontSize: 26,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '$days দিনের গড়',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
             ],
@@ -1391,9 +1318,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
               },
               child: Text(
                 'ঠিক আছে',
@@ -1419,9 +1344,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     });
   }
 
-  void _addNormalOperator(
-    String operator,
-  ) {
+  void _addNormalOperator(String operator) {
     if (_normalExpression.isEmpty) {
       if (operator == '-') {
         setState(() {
@@ -1432,8 +1355,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
 
     final last =
-        _normalExpression[
-            _normalExpression.length - 1];
+        _normalExpression[_normalExpression.length - 1];
 
     if ('+-×÷'.contains(last)) {
       setState(() {
@@ -1442,8 +1364,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       });
     } else {
       setState(() {
-        _normalExpression +=
-            operator;
+        _normalExpression += operator;
       });
     }
   }
@@ -1461,8 +1382,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       );
 
       if (_normalExpression.isEmpty) {
-        _normalDisplayResult =
-            '0';
+        _normalDisplayResult = '0';
       } else {
         _updateNormalPreview();
       }
@@ -1481,28 +1401,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // NORMAL TOKENIZE
   // ============================================================
 
-  List<String> _normalTokens(
-    String expression,
-  ) {
-    final normalized =
-        expression.replaceAll(' ', '');
+  List<String> _normalTokens(String expression) {
+    final normalized = expression.replaceAll(' ', '');
 
     final tokens = <String>[];
     String number = '';
 
-    for (int i = 0;
-        i < normalized.length;
-        i++) {
-      final char =
-          normalized[i];
+    for (int i = 0; i < normalized.length; i++) {
+      final char = normalized[i];
 
-      if ('0123456789.'.contains(
-        char,
-      )) {
+      if ('0123456789.'.contains(char)) {
         number += char;
-      } else if ('+-×÷'.contains(
-        char,
-      )) {
+      } else if ('+-×÷'.contains(char)) {
         if (number.isNotEmpty) {
           tokens.add(number);
           number = '';
@@ -1510,9 +1420,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
         if (char == '-' &&
             (tokens.isEmpty ||
-                '+-×÷'.contains(
-                  tokens.last,
-                ))) {
+                '+-×÷'.contains(tokens.last))) {
           number = '-';
         } else {
           tokens.add(char);
@@ -1531,11 +1439,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // NORMAL EVALUATION
   // ============================================================
 
-  double? _evaluateNormal(
-    String expression,
-  ) {
-    final tokens =
-        _normalTokens(expression);
+  double? _evaluateNormal(String expression) {
+    final tokens = _normalTokens(expression);
 
     if (tokens.isEmpty) {
       return null;
@@ -1545,13 +1450,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     final operators = <String>[];
 
     for (final token in tokens) {
-      if ('+-×÷'.contains(
-        token,
-      )) {
+      if ('+-×÷'.contains(token)) {
         operators.add(token);
       } else {
-        final value =
-            double.tryParse(token);
+        final value = double.tryParse(token);
 
         if (value == null) {
           return null;
@@ -1562,29 +1464,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
 
     if (values.isEmpty ||
-        values.length !=
-            operators.length + 1) {
+        values.length != operators.length + 1) {
       return null;
     }
 
-    // × এবং ÷ আগে
-    final newValues =
-        <double>[];
+    final newValues = <double>[];
+    final newOperators = <String>[];
 
-    final newOperators =
-        <String>[];
+    double current = values[0];
 
-    double current =
-        values[0];
-
-    for (int i = 0;
-        i < operators.length;
-        i++) {
-      final operator =
-          operators[i];
-
-      final next =
-          values[i + 1];
+    for (int i = 0; i < operators.length; i++) {
+      final operator = operators[i];
+      final next = values[i + 1];
 
       if (operator == '×') {
         current *= next;
@@ -1603,20 +1494,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     newValues.add(current);
 
-    // + এবং -
-    double result =
-        newValues[0];
+    double result = newValues[0];
 
-    for (int i = 0;
-        i < newOperators.length;
-        i++) {
+    for (int i = 0; i < newOperators.length; i++) {
       if (newOperators[i] == '+') {
-        result +=
-            newValues[i + 1];
-      } else if (
-          newOperators[i] == '-') {
-        result -=
-            newValues[i + 1];
+        result += newValues[i + 1];
+      } else if (newOperators[i] == '-') {
+        result -= newValues[i + 1];
       }
     }
 
@@ -1628,17 +1512,12 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   void _updateNormalPreview() {
-    final result =
-        _evaluateNormal(
-      _normalExpression,
-    );
+    final result = _evaluateNormal(_normalExpression);
 
     if (result == null) {
-      _normalDisplayResult =
-          '0';
+      _normalDisplayResult = '0';
     } else {
-      _normalDisplayResult =
-          _formatNumber(result);
+      _normalDisplayResult = _formatNumber(result);
     }
   }
 
@@ -1651,33 +1530,22 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
 
-    final result =
-        _evaluateNormal(
-      _normalExpression,
-    );
+    final result = _evaluateNormal(_normalExpression);
 
     if (result == null) {
       setState(() {
-        _normalDisplayResult =
-            '0';
+        _normalDisplayResult = '0';
       });
 
-      _showMessage(
-        'সঠিক হিসাব দিন।',
-      );
+      _showMessage('সঠিক হিসাব দিন।');
       return;
     }
 
-    final formatted =
-        _formatNumber(result);
+    final formatted = _formatNumber(result);
 
     setState(() {
-      _normalDisplayResult =
-          formatted;
-
-      // সর্বশেষ completed result
-      _lastNormalResult =
-          result;
+      _normalDisplayResult = formatted;
+      _lastNormalResult = result;
     });
 
     final historyText =
@@ -1688,12 +1556,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       historyText,
     );
 
-    if (_normalHistory.length >
-        30) {
+    if (_normalHistory.length > 30) {
       _normalHistory =
-          _normalHistory
-              .take(30)
-              .toList();
+          _normalHistory.take(30).toList();
     }
 
     await _saveNormalHistory();
@@ -1703,16 +1568,12 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // NUMBER FORMAT
   // ============================================================
 
-  String _formatNumber(
-    double number,
-  ) {
-    if (number.isNaN ||
-        number.isInfinite) {
+  String _formatNumber(double number) {
+    if (number.isNaN || number.isInfinite) {
       return '0';
     }
 
-    if (number ==
-        number.roundToDouble()) {
+    if (number == number.roundToDouble()) {
       return number.toInt().toString();
     }
 
@@ -1733,8 +1594,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   void _showNormalDailyAverage() {
-    if (_lastNormalResult ==
-        null) {
+    if (_lastNormalResult == null) {
       _showMessage(
         'আগে একটি Normal calculation করুন।',
       );
@@ -1743,8 +1603,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     _showNormalDaysDialog(
       title: 'দৈনিক গড়',
-      totalValue:
-          _lastNormalResult!,
+      totalValue: _lastNormalResult!,
     );
   }
 
@@ -1753,8 +1612,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   void _showNormalMonthlyAverage() {
-    if (_lastNormalResult ==
-        null) {
+    if (_lastNormalResult == null) {
       _showMessage(
         'আগে একটি Normal calculation করুন।',
       );
@@ -1763,8 +1621,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
     _showNormalDaysDialog(
       title: 'মাসিক গড়',
-      totalValue:
-          _lastNormalResult!,
+      totalValue: _lastNormalResult!,
     );
   }
 
@@ -1776,35 +1633,29 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     required String title,
     required double totalValue,
   }) {
-    final controller =
-        TextEditingController();
+    final controller = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor:
-              _cardColor,
+          backgroundColor: _cardColor,
           title: Text(
             title,
             style: TextStyle(
               color: _textColor,
-              fontWeight:
-                  FontWeight.bold,
+              fontWeight: FontWeight.bold,
             ),
           ),
           content: Column(
-            mainAxisSize:
-                MainAxisSize.min,
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'সর্বশেষ হিসাব: ${_formatNumber(totalValue)}',
                 style: TextStyle(
                   color: gold,
-                  fontWeight:
-                      FontWeight.w600,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 14),
@@ -1817,34 +1668,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller:
-                    controller,
-                keyboardType:
-                    TextInputType.number,
+                controller: controller,
+                keyboardType: TextInputType.number,
                 autofocus: true,
                 style: TextStyle(
                   color: _textColor,
                 ),
-                decoration:
-                    InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'যেমন: 5',
                   hintStyle: TextStyle(
-                    color:
-                        _secondaryTextColor,
+                    color: _secondaryTextColor,
                   ),
                   suffixText: 'দিন',
-                  suffixStyle:
-                      TextStyle(
+                  suffixStyle: TextStyle(
                     color: gold,
                   ),
                   filled: true,
-                  fillColor:
-                      _displayColor,
-                  border:
-                      OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius
-                            .circular(12),
+                  fillColor: _displayColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -1853,45 +1695,32 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
               },
               child: Text(
                 'বাতিল',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
             ),
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(
-                backgroundColor:
-                    green,
-                foregroundColor:
-                    Colors.white,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: Colors.white,
               ),
               onPressed: () {
-                final days =
-                    int.tryParse(
-                  controller.text
-                      .trim(),
+                final days = int.tryParse(
+                  controller.text.trim(),
                 );
 
-                if (days == null ||
-                    days <= 0) {
+                if (days == null || days <= 0) {
                   return;
                 }
 
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
 
-                final average =
-                    totalValue /
-                        days;
+                final average = totalValue / days;
 
                 _showNormalAverageResult(
                   title: title,
@@ -1899,10 +1728,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                   days: days,
                 );
               },
-              child:
-                  const Text(
-                'হিসাব করুন',
-              ),
+              child: const Text('হিসাব করুন'),
             ),
           ],
         );
@@ -1919,45 +1745,37 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor:
-              _cardColor,
+          backgroundColor: _cardColor,
           title: Text(
             title,
             style: TextStyle(
               color: _textColor,
-              fontWeight:
-                  FontWeight.bold,
+              fontWeight: FontWeight.bold,
             ),
           ),
           content: Column(
-            mainAxisSize:
-                MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'প্রতি দিন',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                _formatNumber(
-                  average,
-                ),
+                _formatNumber(average),
                 style: TextStyle(
                   color: gold,
                   fontSize: 28,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '$days দিনের গড়',
                 style: TextStyle(
-                  color:
-                      _secondaryTextColor,
+                  color: _secondaryTextColor,
                 ),
               ),
             ],
@@ -1965,9 +1783,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                );
+                Navigator.pop(dialogContext);
               },
               child: Text(
                 'ঠিক আছে',
@@ -1989,20 +1805,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   void _showHistory({
     required bool isTime,
   }) {
-    final history =
-        isTime
-            ? _timeHistory
-            : _normalHistory;
+    final history = isTime ? _timeHistory : _normalHistory;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor:
-          _background,
+      backgroundColor: _background,
       isScrollControlled: true,
-      shape:
-          const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
           top: Radius.circular(22),
         ),
       ),
@@ -2010,103 +1820,67 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         return SafeArea(
           child: SizedBox(
             height:
-                MediaQuery.of(context)
-                        .size
-                        .height *
-                    0.72,
+                MediaQuery.of(context).size.height * 0.72,
             child: Column(
               children: [
-                const SizedBox(
-                  height: 10,
-                ),
+                const SizedBox(height: 10),
                 Container(
                   width: 42,
                   height: 4,
-                  decoration:
-                      BoxDecoration(
+                  decoration: BoxDecoration(
                     color:
-                        _secondaryTextColor
-                            .withValues(
-                      alpha: 0.4,
-                    ),
-                    borderRadius:
-                        BorderRadius
-                            .circular(10),
+                        _secondaryTextColor.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                const SizedBox(
-                  height: 14,
-                ),
+                const SizedBox(height: 14),
                 Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        Icons
-                            .history_rounded,
+                        Icons.history_rounded,
                         color: gold,
                       ),
-                      const SizedBox(
-                        width: 8,
-                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           isTime
                               ? 'Time Calculator History'
                               : 'Normal Calculator History',
-                          style:
-                              TextStyle(
-                            color:
-                                _textColor,
+                          style: TextStyle(
+                            color: _textColor,
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight
-                                    .bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      if (history
-                          .isNotEmpty)
+                      if (history.isNotEmpty)
                         IconButton(
-                          onPressed:
-                              () async {
+                          onPressed: () async {
                             if (isTime) {
-                              setState(
-                                () {
-                                  _timeHistory
-                                      .clear();
-                                },
-                              );
+                              setState(() {
+                                _timeHistory.clear();
+                              });
 
                               await _saveTimeHistory();
                             } else {
-                              setState(
-                                () {
-                                  _normalHistory
-                                      .clear();
-                                },
-                              );
+                              setState(() {
+                                _normalHistory.clear();
+                              });
 
                               await _saveNormalHistory();
                             }
 
-                            if (sheetContext
-                                .mounted) {
-                              Navigator.pop(
-                                sheetContext,
-                              );
+                            if (sheetContext.mounted) {
+                              Navigator.pop(sheetContext);
                             }
                           },
-                          icon:
-                              const Icon(
-                            Icons
-                                .delete_outline_rounded,
-                            color:
-                                Colors.redAccent,
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.redAccent,
                           ),
                         ),
                     ],
@@ -2114,55 +1888,33 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 ),
                 const Divider(),
                 Expanded(
-                  child: history
-                          .isEmpty
+                  child: history.isEmpty
                       ? Center(
                           child: Text(
                             'কোনো history নেই',
-                            style:
-                                TextStyle(
-                              color:
-                                  _secondaryTextColor,
+                            style: TextStyle(
+                              color: _secondaryTextColor,
                             ),
                           ),
                         )
-                      : ListView
-                          .separated(
-                          padding:
-                              const EdgeInsets
-                                  .all(12),
-                          itemCount:
-                              history.length,
-                          separatorBuilder:
-                              (_, __) =>
-                                  const SizedBox(
-                            height: 8,
-                          ),
-                          itemBuilder:
-                              (
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: history.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (
                             itemContext,
                             index,
                           ) {
                             return Container(
-                              padding:
-                                  const EdgeInsets
-                                      .all(14),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    _cardColor,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: _cardColor,
                                 borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  14,
-                                ),
-                                border:
-                                    Border.all(
+                                    BorderRadius.circular(14),
+                                border: Border.all(
                                   color:
-                                      gold.withValues(
-                                    alpha:
-                                        0.18,
-                                  ),
+                                      gold.withValues(alpha: 0.18),
                                 ),
                               ),
                               child: Row(
@@ -2170,50 +1922,31 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                                   Container(
                                     width: 34,
                                     height: 34,
-                                    decoration:
-                                        BoxDecoration(
+                                    decoration: BoxDecoration(
                                       color:
-                                          green.withValues(
-                                        alpha:
-                                            0.2,
-                                      ),
-                                      shape:
-                                          BoxShape
-                                              .circle,
+                                          green.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
                                     ),
-                                    child:
-                                        Center(
-                                      child:
-                                          Text(
+                                    child: Center(
+                                      child: Text(
                                         '${index + 1}',
-                                        style:
-                                            TextStyle(
-                                          color:
-                                              gold,
+                                        style: TextStyle(
+                                          color: gold,
                                           fontWeight:
-                                              FontWeight
-                                                  .bold,
+                                              FontWeight.bold,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(
-                                    width: 12,
-                                  ),
+                                  const SizedBox(width: 12),
                                   Expanded(
-                                    child:
-                                        Text(
-                                      history[
-                                          index],
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            _textColor,
-                                        fontSize:
-                                            15,
+                                    child: Text(
+                                      history[index],
+                                      style: TextStyle(
+                                        color: _textColor,
+                                        fontSize: 15,
                                         fontWeight:
-                                            FontWeight
-                                                .w600,
+                                            FontWeight.w600,
                                       ),
                                     ),
                                   ),
@@ -2235,20 +1968,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // MESSAGE
   // ============================================================
 
-  void _showMessage(
-    String message,
-  ) {
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content:
-              Text(message),
-          backgroundColor:
-              darkGreen,
-          behavior:
-              SnackBarBehavior
-                  .floating,
+          content: Text(message),
+          backgroundColor: darkGreen,
+          behavior: SnackBarBehavior.floating,
         ),
       );
   }
