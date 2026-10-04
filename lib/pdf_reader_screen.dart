@@ -1,9 +1,10 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PdfReaderScreen extends StatefulWidget {
   final String title;
@@ -20,394 +21,412 @@ class PdfReaderScreen extends StatefulWidget {
 }
 
 class _PdfReaderScreenState extends State<PdfReaderScreen> {
-  PdfViewerController? _controller;
+  late final PdfViewerController _controller;
 
   int _currentPage = 1;
-  int _pageCount = 1;
+  int _pageCount = 0;
 
   bool _isRead = false;
-  bool _isLoadingProgress = true;
-  bool _showPageBar = true;
+  bool _loadingProgress = true;
+  bool _viewerReady = false;
 
-  String get _progressFileName => 'pdf_reader_progress.json';
+  String get _pageKey {
+    return 'pdf_last_page_${widget.file.path}';
+  }
+
+  String get _readKey {
+    return 'pdf_read_${widget.file.path}';
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadProgress();
+
+    _controller = PdfViewerController();
+
+    _loadSavedProgress();
   }
 
-  // ═══════════════════════════════════════════════
-  // PROGRESS FILE
-  // ═══════════════════════════════════════════════
+  Future<void> _loadSavedProgress() async {
+    final prefs = await SharedPreferences.getInstance();
 
-  Future<File> _getProgressFile() async {
-    final directory = await getApplicationDocumentsDirectory();
+    final savedPage = prefs.getInt(_pageKey) ?? 1;
+    final savedRead = prefs.getBool(_readKey) ?? false;
 
-    return File(
-      '${directory.path}/$_progressFileName',
+    if (!mounted) return;
+
+    setState(() {
+      _currentPage = math.max(1, savedPage);
+      _isRead = savedRead;
+      _loadingProgress = false;
+    });
+  }
+
+  Future<void> _saveCurrentPage(int page) async {
+    if (page < 1) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setInt(
+      _pageKey,
+      page,
     );
   }
 
-  Future<Map<String, dynamic>> _readProgressData() async {
-    try {
-      final file = await _getProgressFile();
+  Future<void> _toggleReadStatus() async {
+    final newValue = !_isRead;
 
-      if (!await file.exists()) {
-        return {};
-      }
+    setState(() {
+      _isRead = newValue;
+    });
 
-      final text = await file.readAsString();
+    final prefs = await SharedPreferences.getInstance();
 
-      if (text.trim().isEmpty) {
-        return {};
-      }
+    await prefs.setBool(
+      _readKey,
+      newValue,
+    );
 
-      final decoded = jsonDecode(text);
+    if (!mounted) return;
 
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
-
-      return {};
-    } catch (_) {
-      return {};
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          newValue
+              ? 'বইটি পড়া হয়েছে হিসেবে সংরক্ষণ করা হয়েছে।'
+              : 'বইটির পড়া হয়েছে চিহ্নটি সরানো হয়েছে।',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
-  Future<void> _saveProgressData(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final file = await _getProgressFile();
+  void _onViewerReady(
+    PdfDocument document,
+    PdfViewerController controller,
+  ) {
+    if (!mounted) return;
 
-      await file.writeAsString(
-        jsonEncode(data),
-        flush: true,
+    final count = controller.pageCount;
+
+    setState(() {
+      _viewerReady = true;
+      _pageCount = count;
+
+      if (_currentPage > count) {
+        _currentPage = count;
+      }
+
+      if (_currentPage < 1) {
+        _currentPage = 1;
+      }
+    });
+
+    if (_currentPage > 1 && _currentPage <= count) {
+      Future.delayed(
+        const Duration(milliseconds: 250),
+        () {
+          if (!mounted) return;
+
+          controller.goToPage(
+            pageNumber: _currentPage,
+          );
+        },
       );
-    } catch (_) {
-      // Progress save failure should not stop PDF reading.
     }
   }
-
-  // ═══════════════════════════════════════════════
-  // LOAD LAST PAGE + READ STATUS
-  // ═══════════════════════════════════════════════
-
-  Future<void> _loadProgress() async {
-    final data = await _readProgressData();
-
-    final key = widget.file.path;
-    final saved = data[key];
-
-    if (saved is Map) {
-      final savedPage = saved['page'];
-      final savedRead = saved['read'];
-
-      if (savedPage is int && savedPage > 0) {
-        _currentPage = savedPage;
-      }
-
-      if (savedRead is bool) {
-        _isRead = savedRead;
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoadingProgress = false;
-      });
-    }
-  }
-
-  Future<void> _saveCurrentProgress() async {
-    final data = await _readProgressData();
-
-    data[widget.file.path] = {
-      'page': _currentPage,
-      'read': _isRead,
-    };
-
-    await _saveProgressData(data);
-  }
-
-  // ═══════════════════════════════════════════════
-  // PAGE CHANGED
-  // ═══════════════════════════════════════════════
 
   void _onPageChanged(int? pageNumber) {
     if (pageNumber == null || pageNumber < 1) {
       return;
     }
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _currentPage = pageNumber;
     });
 
-    // Automatically save last reading position.
-    _saveCurrentProgress();
-  }
-
-  // ═══════════════════════════════════════════════
-  // VIEWER READY
-  // ═══════════════════════════════════════════════
-
-  void _onViewerReady(
-    PdfDocument document,
-    PdfViewerController controller,
-  ) {
-    _controller = controller;
-
-    final count = controller.pageCount;
-
-    if (mounted) {
-      setState(() {
-        _pageCount = count > 0 ? count : 1;
-      });
-    }
-
-    // Restore the previous reading page.
-    final savedPage = _currentPage.clamp(
-      1,
-      count > 0 ? count : 1,
-    );
-
-    if (savedPage > 1) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _controller == null) {
-          return;
-        }
-
-        _controller!.setCurrentPageNumber(savedPage);
-      });
-    }
-  }
-
-  // ═══════════════════════════════════════════════
-  // MARK AS READ
-  // ═══════════════════════════════════════════════
-
-  Future<void> _toggleReadStatus() async {
-    setState(() {
-      _isRead = !_isRead;
-    });
-
-    await _saveCurrentProgress();
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isRead
-              ? '✓ বইটি পড়া শেষ হিসেবে চিহ্নিত করা হয়েছে'
-              : 'বইটি আবার পড়া হয়নি হিসেবে চিহ্নিত করা হয়েছে',
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    unawaited(
+      _saveCurrentPage(pageNumber),
     );
   }
-
-  // ═══════════════════════════════════════════════
-  // GO TO PAGE
-  // ═══════════════════════════════════════════════
 
   void _goToPage(int page) {
-    final controller = _controller;
-
-    if (controller == null) {
+    if (!_viewerReady || _pageCount <= 0) {
       return;
     }
 
-    final maxPage = controller.pageCount;
+    final target = page.clamp(
+      1,
+      _pageCount,
+    );
 
-    if (maxPage <= 0) {
-      return;
-    }
-
-    final target = page.clamp(1, maxPage);
-
-    controller.setCurrentPageNumber(target);
+    _controller.goToPage(
+      pageNumber: target,
+    );
   }
 
   void _previousPage() {
-    _goToPage(_currentPage - 1);
+    if (_currentPage > 1) {
+      _goToPage(
+        _currentPage - 1,
+      );
+    }
   }
 
   void _nextPage() {
-    _goToPage(_currentPage + 1);
+    if (_currentPage < _pageCount) {
+      _goToPage(
+        _currentPage + 1,
+      );
+    }
   }
 
-  // ═══════════════════════════════════════════════
-  // PAGE BAR
-  // ═══════════════════════════════════════════════
+  void _showPageInput() {
+    if (_pageCount <= 0) {
+      return;
+    }
 
-  Widget _buildPageBar(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final controller = TextEditingController(
+      text: _currentPage.toString(),
+    );
 
-    if (!_showPageBar) {
-      return Positioned(
-        right: 8,
-        top: 0,
-        bottom: 0,
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                setState(() {
-                  _showPageBar = true;
-                });
-              },
-              child: Container(
-                width: 30,
-                height: 78,
-                decoration: BoxDecoration(
-                  color: dark
-                      ? const Color(0xEE10291F)
-                      : const Color(0xEEFFFFF8),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0x55C9A45C),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.chevron_left_rounded,
-                  color: Color(0xFFC9A45C),
-                ),
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'পৃষ্ঠা নির্বাচন করুন',
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'পৃষ্ঠা নম্বর',
+              hintText: '১ - $_pageCount',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
+            onSubmitted: (_) {
+              _submitPageInput(
+                dialogContext,
+                controller,
+              );
+            },
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('বাতিল'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _submitPageInput(
+                  dialogContext,
+                  controller,
+                );
+              },
+              child: const Text('যান'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(
+      controller.dispose,
+    );
+  }
+
+  void _submitPageInput(
+    BuildContext dialogContext,
+    TextEditingController inputController,
+  ) {
+    final page = int.tryParse(
+      inputController.text.trim(),
+    );
+
+    if (page == null || page < 1 || page > _pageCount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '১ থেকে $_pageCount এর মধ্যে একটি page দিন।',
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pop(dialogContext);
+
+    _goToPage(page);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    if (_loadingProgress) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
         ),
       );
     }
 
-    return Positioned(
-      right: 7,
-      top: 12,
-      bottom: 12,
-      child: SizedBox(
-        width: 52,
-        child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          IconButton(
+            tooltip: _isRead
+                ? 'পড়া হয়নি হিসেবে চিহ্নিত করুন'
+                : 'পড়া হয়েছে হিসেবে চিহ্নিত করুন',
+            onPressed: _toggleReadStatus,
+            icon: Icon(
+              _isRead
+                  ? Icons.check_circle_rounded
+                  : Icons.check_circle_outline_rounded,
+              color: _isRead
+                  ? const Color(0xFFC9A45C)
+                  : null,
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(
+              right: 10,
+            ),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0x14C9A45C),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.menu_book_rounded,
+              color: Color(0xFFC9A45C),
+              size: 21,
+            ),
+          ),
+        ],
+      ),
+      body: Container(
+        color: dark
+            ? const Color(0xFF071C14)
+            : const Color(0xFFF1EDE3),
+        child: Stack(
           children: [
-            // Hide button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {
-                  setState(() {
-                    _showPageBar = false;
-                  });
-                },
-                child: Container(
-                  width: 38,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: dark
-                        ? const Color(0xEE10291F)
-                        : const Color(0xEEFFFFF8),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0x44C9A45C),
+            Positioned.fill(
+              child: PdfViewer.file(
+                widget.file.path,
+                controller: _controller,
+                initialPageNumber: _currentPage,
+                params: PdfViewerParams(
+                  backgroundColor: dark
+                      ? const Color(0xFF071C14)
+                      : const Color(0xFFF1EDE3),
+                  margin: 8,
+                  pageDropShadow: const BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 5,
+                    spreadRadius: 1,
+                    offset: Offset(
+                      1,
+                      2,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: Color(0xFFC9A45C),
-                  ),
+                  onViewerReady: _onViewerReady,
+                  onPageChanged: _onPageChanged,
                 ),
               ),
             ),
 
-            const SizedBox(height: 7),
-
-            // Current page
-            Container(
-              width: 44,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: dark
-                    ? const Color(0xEE10291F)
-                    : const Color(0xEEFFFFF8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0x44C9A45C),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    '$_currentPage',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFC9A45C),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
+            // Top page indicator
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
                     ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    '/ $_pageCount',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
+                    decoration: BoxDecoration(
                       color: dark
-                          ? Colors.white70
-                          : const Color(0xFF18352A),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
+                          ? const Color(0xDD10291F)
+                          : const Color(0xEEFFFFFC),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0x55C9A45C),
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x22000000),
+                          blurRadius: 8,
+                          offset: Offset(
+                            0,
+                            3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      _pageCount > 0
+                          ? 'পৃষ্ঠা $_currentPage / $_pageCount'
+                          : 'পৃষ্ঠা $_currentPage',
+                      style: TextStyle(
+                        color: dark
+                            ? const Color(0xFFF4EFE3)
+                            : const Color(0xFF18352A),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
 
-            const SizedBox(height: 8),
-
-            // Previous page
-            _pageButton(
-              context,
-              icon: Icons.keyboard_arrow_up_rounded,
-              onTap: _previousPage,
-            ),
-
-            const SizedBox(height: 6),
-
-            // Vertical draggable scrollbar
-            Expanded(
-              child: _VerticalPageBar(
-                currentPage: _currentPage,
-                pageCount: _pageCount,
-                isDark: dark,
-                onPageChanged: _goToPage,
+            // Right side page navigation
+            Positioned(
+              top: 75,
+              right: 7,
+              bottom: 82,
+              child: _pageNavigationBar(
+                dark: dark,
               ),
             ),
 
-            const SizedBox(height: 6),
-
-            // Next page
-            _pageButton(
-              context,
-              icon: Icons.keyboard_arrow_down_rounded,
-              onTap: _nextPage,
+            // Bottom controls
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: _bottomControls(
+                dark: dark,
+              ),
             ),
           ],
         ),
@@ -415,313 +434,206 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 
-  Widget _pageButton(
-    BuildContext context, {
-    required IconData icon,
-    required VoidCallback onTap,
+  Widget _pageNavigationBar({
+    required bool dark,
   }) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = dark
+        ? const Color(0xE610291F)
+        : const Color(0xEFFFFCF5);
 
+    return Container(
+      width: 48,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0x55C9A45C),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 10,
+            offset: Offset(
+              0,
+              3,
+            ),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(
+        vertical: 8,
+      ),
+      child: Column(
+        children: [
+          _smallControlButton(
+            icon: Icons.keyboard_arrow_up_rounded,
+            onPressed: _previousPage,
+          ),
+          const SizedBox(height: 5),
+          Expanded(
+            child: _verticalPageSlider(
+              dark: dark,
+            ),
+          ),
+          const SizedBox(height: 5),
+          _smallControlButton(
+            icon: Icons.keyboard_arrow_down_rounded,
+            onPressed: _nextPage,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _verticalPageSlider({
+    required bool dark,
+  }) {
+    if (_pageCount <= 1) {
+      return const Center(
+        child: Icon(
+          Icons.drag_handle_rounded,
+          color: Color(0xFFC9A45C),
+          size: 20,
+        ),
+      );
+    }
+
+    final max = _pageCount.toDouble();
+    final value = _currentPage
+        .clamp(1, _pageCount)
+        .toDouble();
+
+    return RotatedBox(
+      quarterTurns: 3,
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          trackHeight: 4,
+          activeTrackColor: const Color(0xFFC9A45C),
+          inactiveTrackColor: dark
+              ? const Color(0x445A806E)
+              : const Color(0x445A806E),
+          thumbColor: const Color(0xFFC9A45C),
+          overlayColor: const Color(0x22C9A45C),
+          thumbShape: const RoundSliderThumbShape(
+            enabledThumbRadius: 7,
+          ),
+          overlayShape: const RoundSliderOverlayShape(
+            overlayRadius: 14,
+          ),
+        ),
+        child: Slider(
+          min: 1,
+          max: max,
+          divisions: _pageCount - 1,
+          value: value,
+          onChanged: (newValue) {
+            _goToPage(
+              newValue.round(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _smallControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(13),
-        onTap: onTap,
-        child: Container(
-          width: 38,
-          height: 34,
-          decoration: BoxDecoration(
-            color: dark
-                ? const Color(0xEE10291F)
-                : const Color(0xEEFFFFF8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0x44C9A45C),
-            ),
-          ),
+        borderRadius: BorderRadius.circular(18),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 36,
+          height: 36,
           child: Icon(
             icon,
-            size: 20,
             color: const Color(0xFFC9A45C),
+            size: 24,
           ),
         ),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════
-  // APP BAR
-  // ═══════════════════════════════════════════════
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return AppBar(
-      titleSpacing: 12,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
+  Widget _bottomControls({
+    required bool dark,
+  }) {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+      ),
+      decoration: BoxDecoration(
+        color: dark
+            ? const Color(0xE610291F)
+            : const Color(0xF5FFFFFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0x55C9A45C),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 12,
+            offset: Offset(
+              0,
+              4,
             ),
           ),
-          if (_pageCount > 1)
-            Text(
-              'পৃষ্ঠা $_currentPage / $_pageCount',
-              style: TextStyle(
-                fontSize: 10.5,
-                color: dark
-                    ? Colors.white60
-                    : const Color(0xFF18352A).withValues(alpha: 0.60),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
         ],
       ),
-      actions: [
-        // Read status
-        IconButton(
-          tooltip: _isRead ? 'পড়া শেষ হয়েছে' : 'পড়া শেষ হিসেবে চিহ্নিত করুন',
-          onPressed: _toggleReadStatus,
-          icon: Icon(
-            _isRead
-                ? Icons.check_circle_rounded
-                : Icons.check_circle_outline_rounded,
-            color: _isRead
-                ? const Color(0xFF2E8B63)
-                : const Color(0xFFC9A45C),
-          ),
-        ),
-
-        Container(
-          margin: const EdgeInsets.only(right: 10),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0x14C9A45C),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            _isRead
-                ? Icons.menu_book_rounded
-                : Icons.menu_book_outlined,
-            color: const Color(0xFFC9A45C),
-            size: 21,
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return PopScope(
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          _saveCurrentProgress();
-        }
-      },
-      child: Scaffold(
-        appBar: _buildAppBar(context),
-        body: Stack(
-          children: [
-            Container(
-              color: dark
-                  ? const Color(0xFF071C14)
-                  : const Color(0xFFF1EDE3),
-              child: _isLoadingProgress
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFC9A45C),
-                      ),
-                    )
-                  : PdfViewer.file(
-                      widget.file.path,
-                      initialPageNumber: _currentPage,
-                      onViewerReady: _onViewerReady,
-                      controller: _controller,
-                      params: PdfViewerParams(
-                        onPageChanged: _onPageChanged,
-                      ),
-                    ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'আগের পৃষ্ঠা',
+            onPressed: _currentPage > 1
+                ? _previousPage
+                : null,
+            icon: const Icon(
+              Icons.chevron_left_rounded,
             ),
-
-            if (!_isLoadingProgress)
-              _buildPageBar(context),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// VERTICAL DRAGGABLE PAGE BAR
-// ═══════════════════════════════════════════════════════════════
-
-class _VerticalPageBar extends StatefulWidget {
-  final int currentPage;
-  final int pageCount;
-  final bool isDark;
-  final ValueChanged<int> onPageChanged;
-
-  const _VerticalPageBar({
-    required this.currentPage,
-    required this.pageCount,
-    required this.isDark,
-    required this.onPageChanged,
-  });
-
-  @override
-  State<_VerticalPageBar> createState() => _VerticalPageBarState();
-}
-
-class _VerticalPageBarState extends State<_VerticalPageBar> {
-  double _dragPosition = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxPage =
-        widget.pageCount > 1 ? widget.pageCount : 1;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final height = constraints.maxHeight;
-
-        final currentRatio =
-            (widget.currentPage - 1) / (maxPage - 1);
-
-        final safeRatio = currentRatio.isNaN
-            ? 0.0
-            : currentRatio.clamp(0.0, 1.0);
-
-        final handleSize = 30.0;
-        final trackHeight =
-            math.max(1.0, height - handleSize);
-
-        final handleTop = trackHeight * safeRatio;
-
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-
-          onTapDown: (details) {
-            _changeFromPosition(
-              details.localPosition.dy,
-              height,
-            );
-          },
-
-          onVerticalDragStart: (details) {
-            _dragPosition = details.localPosition.dy;
-          },
-
-          onVerticalDragUpdate: (details) {
-            _dragPosition += details.delta.dy;
-
-            _changeFromPosition(
-              _dragPosition,
-              height,
-            );
-          },
-
-          child: Stack(
-            alignment: Alignment.topCenter,
-            children: [
-              // Track
-              Positioned(
-                top: 4,
-                bottom: 4,
-                child: Container(
-                  width: 5,
-                  decoration: BoxDecoration(
-                    color: widget.isDark
-                        ? const Color(0x553B6D59)
-                        : const Color(0x33517B68),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-
-              // Progress
-              Positioned(
-                top: 4,
-                height: math.max(
-                  2,
-                  (height - 8) * safeRatio,
-                ),
-                child: Container(
-                  width: 5,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC9A45C),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-
-              // Handle
-              Positioned(
-                top: handleTop,
-                child: Container(
-                  width: handleSize,
-                  height: handleSize,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC9A45C),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: widget.isDark
-                          ? const Color(0xFF10291F)
-                          : const Color(0xFFFFFCF5),
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.20),
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
-                    size: 13,
-                    color: Color(0xFF18352A),
-                  ),
-                ),
-              ),
-            ],
           ),
-        );
-      },
-    );
-  }
-
-  void _changeFromPosition(
-    double position,
-    double height,
-  ) {
-    if (widget.pageCount <= 1) {
-      return;
-    }
-
-    final handleSize = 30.0;
-    final availableHeight =
-        math.max(1.0, height - handleSize);
-
-    final ratio = (position - handleSize / 2) /
-        availableHeight;
-
-    final safeRatio = ratio.clamp(0.0, 1.0);
-
-    final page = 1 +
-        ((widget.pageCount - 1) * safeRatio).round();
-
-    widget.onPageChanged(
-      page.clamp(1, widget.pageCount),
+          Expanded(
+            child: Center(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _showPageInput,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  child: Text(
+                    _pageCount > 0
+                        ? '$_currentPage / $_pageCount'
+                        : '$_currentPage',
+                    style: TextStyle(
+                      color: dark
+                          ? const Color(0xFFF4EFE3)
+                          : const Color(0xFF18352A),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'পরের পৃষ্ঠা',
+            onPressed: _pageCount > 0 &&
+                    _currentPage < _pageCount
+                ? _nextPage
+                : null,
+            icon: const Icon(
+              Icons.chevron_right_rounded,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
