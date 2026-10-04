@@ -1,8 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'about_screen.dart';
 import 'book_list_screen.dart';
-import 'calculator_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final VoidCallback onToggleTheme;
@@ -16,129 +17,186 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
-          children: [
-            // Dark / Light Theme Button
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0x22176B45)
-                      : const Color(0x14C9A45C),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0x44C9A45C),
-                  ),
-                ),
-                child: IconButton(
-                  tooltip: isDarkMode ? 'Light Mode' : 'Dark Mode',
-                  onPressed: onToggleTheme,
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: Icon(
-                      isDarkMode
-                          ? Icons.light_mode_rounded
-                          : Icons.dark_mode_rounded,
-                      key: ValueKey(isDarkMode),
-                      color: const Color(0xFFC9A45C),
-                    ),
-                  ),
+      body: Stack(
+        children: [
+          // Islamic geometric background
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: IslamicPatternPainter(
+                  isDark: dark,
                 ),
               ),
             ),
+          ),
 
-            const SizedBox(height: 8),
+          SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate(
+                      [
+                        // Theme button
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: dark
+                                  ? const Color(0x22176B45)
+                                  : const Color(0x14C9A45C),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0x44C9A45C),
+                              ),
+                            ),
+                            child: IconButton(
+                              tooltip:
+                                  isDarkMode ? 'Light Mode' : 'Dark Mode',
+                              onPressed: onToggleTheme,
+                              icon: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 250),
+                                child: Icon(
+                                  isDarkMode
+                                      ? Icons.light_mode_rounded
+                                      : Icons.dark_mode_rounded,
+                                  key: ValueKey(isDarkMode),
+                                  color: const Color(0xFFC9A45C),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
 
-            // বইয়ের সংগ্রহ
-            _sectionTitle(
-              context,
-              icon: Icons.menu_book_rounded,
-              title: 'বইয়ের সংগ্রহ',
-              subtitle: 'আপনার পছন্দের বিভাগ থেকে বই পড়ুন',
+                        const SizedBox(height: 12),
+
+                        // Header
+                        _buildHeader(context),
+
+                        const SizedBox(height: 24),
+
+                        // Section title
+                        _sectionTitle(
+                          context,
+                          icon: Icons.menu_book_rounded,
+                          title: 'বইয়ের সংগ্রহ',
+                          subtitle: 'আপনার পছন্দের বিভাগ থেকে বই পড়ুন',
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // 3-column category grid
+                        _categoryGrid(context),
+
+                        const SizedBox(height: 24),
+
+                        // About
+                        _aboutCard(context),
+
+                        const SizedBox(height: 28),
+
+                        // Footer
+                        _footer(context),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 10),
+  Widget _buildHeader(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-            // Category 01
-            _categoryCard(
-              context,
-              icon: Icons.edit_document,
-              title: 'আবেদনপত্রের কন্টাক্টের আগে',
-              subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'আবেদনপত্রের কন্টাক্টের আগে',
-              number: '০১',
-            ),
-
-            // Category 02
-            _categoryCard(
-              context,
-              icon: Icons.quiz_rounded,
-              title: 'প্রশ্নপত্রের কন্টাক্টের আগে',
-              subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'প্রশ্নপত্রের কন্টাক্টের আগে',
-              number: '০২',
-            ),
-
-            // Category 03
-            _categoryCard(
-              context,
-              icon: Icons.workspace_premium_rounded,
-              title: 'শপথ কন্টাক্টের আগে',
-              subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'শপথ কন্টাক্টের আগে',
-              number: '০৩',
-            ),
-
-            // Category 04
-            _categoryCard(
-              context,
-              icon: Icons.menu_book_rounded,
-              title: 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)',
-              subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)',
-              number: '০৪',
-            ),
-
-            // Category 05
-            _categoryCard(
-              context,
-              icon: Icons.auto_stories_rounded,
-              title: 'হাদীস গ্রন্থ',
-              subtitle: 'এই বিভাগের বইসমূহ',
-              category: 'হাদীস গ্রন্থ',
-              number: '০৫',
-            ),
-
-            const SizedBox(height: 18),
-
-            // প্রয়োজনীয় টুল
-            _sectionTitle(
-              context,
-              icon: Icons.calculate_rounded,
-              title: 'প্রয়োজনীয় টুল',
-              subtitle: 'দৈনন্দিন হিসাব সহজ করুন',
-            ),
-
-            const SizedBox(height: 10),
-
-            // Calculator
-            _calculatorCard(context),
-
-            const SizedBox(height: 28),
-
-            // About
-            _aboutCard(context),
-
-            const SizedBox(height: 24),
-
-            // Footer
-            _footer(context),
-          ],
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [
+                  Color(0xFF123D2A),
+                  Color(0xFF0B2A1D),
+                ]
+              : const [
+                  Color(0xFFEAF5EE),
+                  Color(0xFFFFFBF0),
+                ],
         ),
+        border: Border.all(
+          color: const Color(0x55C9A45C),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: dark
+                ? Colors.black.withValues(alpha: 0.20)
+                : const Color(0x22175132),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 62,
+            height: 62,
+            decoration: BoxDecoration(
+              color: const Color(0xFFC9A45C),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFC9A45C).withValues(alpha: 0.25),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: Color(0xFF18352A),
+              size: 31,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ইসলামিক বই',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.2,
+                      ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'পড়ুন • শিখুন • নিজেকে গড়ুন',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.color
+                            ?.withValues(alpha: 0.68),
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -149,13 +207,15 @@ class HomeScreen extends StatelessWidget {
     required String title,
     required String subtitle,
   }) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Row(
       children: [
         Container(
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
+            color: dark
                 ? const Color(0x22176B45)
                 : const Color(0x14175132),
             borderRadius: BorderRadius.circular(13),
@@ -163,9 +223,9 @@ class HomeScreen extends StatelessWidget {
               color: const Color(0x44C9A45C),
             ),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFC9A45C),
+          child: const Icon(
+            Icons.menu_book_rounded,
+            color: Color(0xFFC9A45C),
             size: 21,
           ),
         ),
@@ -198,19 +258,67 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _categoryGrid(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 3,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 0.82,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        _categoryCard(
+          context,
+          icon: Icons.edit_document,
+          title: 'আবেদনপত্রের\nকন্টাক্টের আগে',
+          category: 'আবেদনপত্রের কন্টাক্টের আগে',
+          number: '০১',
+        ),
+        _categoryCard(
+          context,
+          icon: Icons.quiz_rounded,
+          title: 'প্রশ্নপত্রের\nকন্টাক্টের আগে',
+          category: 'প্রশ্নপত্রের কন্টাক্টের আগে',
+          number: '০২',
+        ),
+        _categoryCard(
+          context,
+          icon: Icons.workspace_premium_rounded,
+          title: 'শপথ\nকন্টাক্টের আগে',
+          category: 'শপথ কন্টাক্টের আগে',
+          number: '০৩',
+        ),
+        _categoryCard(
+          context,
+          icon: Icons.menu_book_rounded,
+          title: 'কোরআন অধ্যয়ন\n(তাফহীমুল কোরআন)',
+          category: 'কোরআন অধ্যয়ন (তাফহীমুল কোরআন)',
+          number: '০৪',
+        ),
+        _categoryCard(
+          context,
+          icon: Icons.auto_stories_rounded,
+          title: 'হাদীস\nগ্রন্থ',
+          category: 'হাদীস গ্রন্থ',
+          number: '০৫',
+        ),
+      ],
+    );
+  }
+
   Widget _categoryCard(
     BuildContext context, {
     required IconData icon,
     required String title,
-    required String subtitle,
     required String category,
     required String number,
   }) {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         onTap: () {
           Navigator.push(
             context,
@@ -221,162 +329,83 @@ class HomeScreen extends StatelessWidget {
             ),
           );
         },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(9, 12, 9, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            color: dark
+                ? const Color(0xCC10291F)
+                : const Color(0xEFFFFCF5),
+            border: Border.all(
+              color: const Color(0x44C9A45C),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: dark
+                    ? Colors.black.withValues(alpha: 0.12)
+                    : const Color(0x18175132),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 58,
-                height: 58,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: dark
-                        ? const [
-                            Color(0xFF1B7650),
-                            Color(0xFF0F5132),
-                          ]
-                        : const [
-                            Color(0xFF176B45),
-                            Color(0xFF0F5132),
-                          ],
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF176B45),
+                      Color(0xFF0F5132),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
                   color: const Color(0xFFE3C875),
-                  size: 27,
+                  size: 25,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(height: 9),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
+                child: Center(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
+              const SizedBox(height: 4),
               Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Color(0x14C9A45C),
-                  shape: BoxShape.circle,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
                 ),
-                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0x14C9A45C),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Text(
                   number,
                   style: const TextStyle(
                     color: Color(0xFFC9A45C),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: Color(0xFFC9A45C),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _calculatorCard(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: dark
-            ? const Color(0xFF10291F)
-            : const Color(0xFFFFFCF5),
-        border: Border.all(
-          color: const Color(0x44C9A45C),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CalculatorScreen(),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFC9A45C),
-                      Color(0xFFE3C875),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: const Icon(
-                  Icons.calculate_rounded,
-                  color: Color(0xFF18352A),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ক্যালকুলেটর',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Normal ও Time Calculator',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 17,
-                color: Color(0xFFC9A45C),
               ),
             ],
           ),
@@ -388,28 +417,10 @@ class HomeScreen extends StatelessWidget {
   Widget _aboutCard(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [
-                  Color(0xFF241F12),
-                  Color(0xFF151C17),
-                ]
-              : const [
-                  Color(0xFFFFF5D9),
-                  Color(0xFFFFFCF5),
-                ],
-        ),
-        border: Border.all(
-          color: const Color(0x55C9A45C),
-        ),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         onTap: () {
           Navigator.push(
             context,
@@ -418,13 +429,41 @@ class HomeScreen extends StatelessWidget {
             ),
           );
         },
-        child: Padding(
-          padding: const EdgeInsets.all(18),
+        child: Container(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dark
+                  ? const [
+                      Color(0xFF241F12),
+                      Color(0xFF151C17),
+                    ]
+                  : const [
+                      Color(0xFFFFF5D9),
+                      Color(0xFFFFFCF5),
+                    ],
+            ),
+            border: Border.all(
+              color: const Color(0x55C9A45C),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: dark
+                    ? Colors.black.withValues(alpha: 0.15)
+                    : const Color(0x18175132),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
           child: Row(
             children: [
               Container(
-                width: 58,
-                height: 58,
+                width: 55,
+                height: 55,
                 decoration: BoxDecoration(
                   color: const Color(0xFFC9A45C),
                   borderRadius: BorderRadius.circular(17),
@@ -432,10 +471,10 @@ class HomeScreen extends StatelessWidget {
                 child: const Icon(
                   Icons.info_outline_rounded,
                   color: Color(0xFF18352A),
-                  size: 29,
+                  size: 28,
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 14),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +482,7 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       'অ্যাপ সম্পর্কে',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -496,5 +535,95 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Subtle Islamic geometric pattern for the app background.
+class IslamicPatternPainter extends CustomPainter {
+  final bool isDark;
+
+  IslamicPatternPainter({
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8
+      ..color = isDark
+          ? const Color(0x0DFFFFFF)
+          : const Color(0x12175132);
+
+    const double spacing = 82;
+
+    for (double y = -spacing; y < size.height + spacing; y += spacing) {
+      for (double x = -spacing; x < size.width + spacing; x += spacing) {
+        _drawIslamicStar(
+          canvas,
+          Offset(x, y),
+          28,
+          paint,
+        );
+      }
+    }
+  }
+
+  void _drawIslamicStar(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+  ) {
+    final path = Path();
+
+    const int points = 8;
+
+    for (int i = 0; i < points * 2; i++) {
+      final angle = (-math.pi / 2) + (math.pi / points * i);
+      final currentRadius = i.isEven ? radius : radius * 0.48;
+
+      final point = Offset(
+        center.dx + math.cos(angle) * currentRadius,
+        center.dy + math.sin(angle) * currentRadius,
+      );
+
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    // Inner diamond pattern
+    final inner = Path();
+
+    for (int i = 0; i < 4; i++) {
+      final angle = (-math.pi / 4) + (math.pi / 2 * i);
+
+      final point = Offset(
+        center.dx + math.cos(angle) * radius * 0.48,
+        center.dy + math.sin(angle) * radius * 0.48,
+      );
+
+      if (i == 0) {
+        inner.moveTo(point.dx, point.dy);
+      } else {
+        inner.lineTo(point.dx, point.dy);
+      }
+    }
+
+    inner.close();
+
+    canvas.drawPath(inner, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant IslamicPatternPainter oldDelegate) {
+    return oldDelegate.isDark != isDark;
   }
 }
