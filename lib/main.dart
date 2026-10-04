@@ -18,7 +18,8 @@ class IslamicBookApp extends StatefulWidget {
 }
 
 class _IslamicBookAppState extends State<IslamicBookApp> {
-  ThemeMode _themeMode = ThemeMode.dark;
+  // App এখন প্রথমবার Light Mode-এ শুরু হবে।
+  ThemeMode _themeMode = ThemeMode.light;
 
   void _toggleTheme() {
     setState(() {
