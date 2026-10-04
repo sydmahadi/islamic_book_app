@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
@@ -8,83 +9,193 @@ class CalculatorScreen extends StatefulWidget {
 }
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
+  // ============================================================
+  // THEME
+  // ============================================================
+
+  static const Color darkGreen = Color(0xFF0F5132);
+  static const Color green = Color(0xFF176B45);
+  static const Color gold = Color(0xFFC9A45C);
+  static const Color darkBackground = Color(0xFF10291F);
+  static const Color lightBackground = Color(0xFFFFFCF5);
+  static const Color actionColor = Color(0xFF294D3E);
+
+  bool _isDarkMode = true;
+
+  // ============================================================
+  // CALCULATOR TYPE
+  // ============================================================
+
   bool _isTimeCalculator = true;
 
   // ============================================================
-  // TIME CALCULATOR STATE
+  // TIME CALCULATOR
   // ============================================================
 
   String _timeExpression = '';
-  int _timeResultMinutes = 0;
+  String _timeDisplayResult = '0';
 
-  final ScrollController _timeExpressionScrollController =
-      ScrollController();
+  // সর্বশেষ সম্পন্ন calculation-এর result
+  int? _lastTimeResultMinutes;
 
-  final List<String> _timeHistory = [];
+  List<String> _timeHistory = [];
 
   // ============================================================
-  // NORMAL CALCULATOR STATE
+  // NORMAL CALCULATOR
   // ============================================================
 
   String _normalExpression = '';
-  String _normalResult = '0';
+  String _normalDisplayResult = '0';
 
-  final ScrollController _normalExpressionScrollController =
-      ScrollController();
+  // সর্বশেষ সম্পন্ন calculation-এর result
+  double? _lastNormalResult;
 
-  final List<String> _normalHistory = [];
+  List<String> _normalHistory = [];
 
   // ============================================================
-  // MAIN
+  // INIT
+  // ============================================================
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+    _loadTheme();
+  }
+
+  // ============================================================
+  // THEME LOAD / SAVE
+  // ============================================================
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isDarkMode = prefs.getBool('calculator_dark_mode') ?? true;
+    });
+  }
+
+  Future<void> _toggleTheme() async {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('calculator_dark_mode', _isDarkMode);
+  }
+
+  // ============================================================
+  // HISTORY LOAD
+  // ============================================================
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final timeHistory =
+        prefs.getStringList('calculator_time_history') ?? [];
+
+    final normalHistory =
+        prefs.getStringList('calculator_normal_history') ?? [];
+
+    if (!mounted) return;
+
+    setState(() {
+      _timeHistory = List<String>.from(timeHistory);
+      _normalHistory = List<String>.from(normalHistory);
+    });
+  }
+
+  Future<void> _saveTimeHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      'calculator_time_history',
+      _timeHistory,
+    );
+  }
+
+  Future<void> _saveNormalHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      'calculator_normal_history',
+      _normalHistory,
+    );
+  }
+
+  // ============================================================
+  // COLORS
+  // ============================================================
+
+  Color get _background =>
+      _isDarkMode ? darkBackground : lightBackground;
+
+  Color get _cardColor =>
+      _isDarkMode
+          ? const Color(0xFF183A2D)
+          : const Color(0xFFFFFFFF);
+
+  Color get _displayColor =>
+      _isDarkMode
+          ? const Color(0xFF0C2118)
+          : const Color(0xFFF3EFE4);
+
+  Color get _textColor =>
+      _isDarkMode
+          ? Colors.white
+          : const Color(0xFF1A1A1A);
+
+  Color get _secondaryTextColor =>
+      _isDarkMode
+          ? Colors.white70
+          : const Color(0xFF666666);
+
+  // ============================================================
+  // MAIN BUILD
   // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('ক্যালকুলেটর'),
+        backgroundColor: _background,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          'ক্যালকুলেটর',
+          style: TextStyle(
+            color: _textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
-          if (_isTimeCalculator && _timeHistory.isNotEmpty)
-            IconButton(
-              tooltip: 'History',
-              onPressed: _showTimeHistory,
-              icon: const Icon(
-                Icons.history_rounded,
-                color: Color(0xFFC9A45C),
-              ),
+          IconButton(
+            tooltip: _isDarkMode ? 'Light Mode' : 'Dark Mode',
+            onPressed: _toggleTheme,
+            icon: Icon(
+              _isDarkMode
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+              color: gold,
             ),
-          if (!_isTimeCalculator && _normalHistory.isNotEmpty)
-            IconButton(
-              tooltip: 'History',
-              onPressed: _showNormalHistory,
-              icon: const Icon(
-                Icons.history_rounded,
-                color: Color(0xFFC9A45C),
-              ),
-            ),
+          ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 10),
-
-            // ==================================================
-            // CALCULATOR TOGGLE
-            // ==================================================
-
-            _calculatorToggle(),
-
-            const SizedBox(height: 10),
-
-            // ==================================================
-            // CALCULATOR BODY
-            // ==================================================
+            _buildCalculatorToggle(),
 
             Expanded(
-              child: _isTimeCalculator
-                  ? _buildTimeCalculator()
-                  : _buildNormalCalculator(),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _isTimeCalculator
+                    ? _buildTimeCalculator()
+                    : _buildNormalCalculator(),
+              ),
             ),
           ],
         ),
@@ -93,61 +204,52 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   // ============================================================
-  // TOGGLE
+  // TOP TOGGLE
   // ============================================================
 
-  Widget _calculatorToggle() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF10291F)
-              : const Color(0xFFFFFCF5),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0x55C9A45C),
+  Widget _buildCalculatorToggle() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gold.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _toggleButton(
+              title: 'Time Calculator',
+              icon: Icons.access_time_rounded,
+              selected: _isTimeCalculator,
+              onTap: () {
+                setState(() {
+                  _isTimeCalculator = true;
+                });
+              },
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _toggleItem(
-                title: 'Time Calculator',
-                icon: Icons.access_time_rounded,
-                selected: _isTimeCalculator,
-                onTap: () {
-                  if (!_isTimeCalculator) {
-                    setState(() {
-                      _isTimeCalculator = true;
-                    });
-                  }
-                },
-              ),
+          Expanded(
+            child: _toggleButton(
+              title: 'Normal Calculator',
+              icon: Icons.calculate_rounded,
+              selected: !_isTimeCalculator,
+              onTap: () {
+                setState(() {
+                  _isTimeCalculator = false;
+                });
+              },
             ),
-            Expanded(
-              child: _toggleItem(
-                title: 'Normal Calculator',
-                icon: Icons.calculate_rounded,
-                selected: !_isTimeCalculator,
-                onTap: () {
-                  if (_isTimeCalculator) {
-                    setState(() {
-                      _isTimeCalculator = false;
-                    });
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _toggleItem({
+  Widget _toggleButton({
     required String title,
     required IconData icon,
     required bool selected,
@@ -156,44 +258,33 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 8,
+        ),
         decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFF176B45)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          color: selected ? green : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 18,
-              color: selected
-                  ? const Color(0xFFC9A45C)
-                  : Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.color
-                      ?.withValues(alpha: 0.65),
+              size: 19,
+              color: selected ? Colors.white : gold,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 7),
             Flexible(
               child: Text(
                 title,
-                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  color: selected ? Colors.white : _textColor,
                   fontWeight:
-                      selected ? FontWeight.w900 : FontWeight.w600,
-                  color: selected
-                      ? Colors.white
-                      : Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.color,
+                      selected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -204,81 +295,71 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   // ============================================================
-  // TIME CALCULATOR
+  // TIME CALCULATOR UI
   // ============================================================
 
   Widget _buildTimeCalculator() {
     return Column(
+      key: const ValueKey('time_calculator'),
       children: [
+        _buildTimeDisplay(),
+        _buildTimeTools(),
         Expanded(
-          child: _timeDisplay(),
+          child: _buildKeypad(
+            isTime: true,
+          ),
         ),
-        _timeQuickTools(),
-        _timeKeypad(),
       ],
     );
   }
 
-  Widget _timeDisplay() {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildTimeDisplay() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-      padding: const EdgeInsets.all(18),
-      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: dark
-            ? const Color(0xFF10291F)
-            : const Color(0xFFFFFCF5),
+        color: _displayColor,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0x44C9A45C),
+          color: gold.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          SingleChildScrollView(
-            controller: _timeExpressionScrollController,
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              _timeExpression.isEmpty
-                  ? '0.00'
-                  : _timeExpression,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withValues(alpha: 0.65),
+          SizedBox(
+            width: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _timeExpression.isEmpty
+                    ? '0'
+                    : _timeExpression,
+                maxLines: 1,
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            _formatTime(_timeResultMinutes),
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFFC9A45C),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            _formatShortTime(_timeResultMinutes),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.color
-                  ?.withValues(alpha: 0.60),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _timeDisplayResult,
+                maxLines: 1,
+                style: TextStyle(
+                  color: gold,
+                  fontSize: 31,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -286,9 +367,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  Widget _timeQuickTools() {
+  // ============================================================
+  // TIME TOOLS
+  // ============================================================
+
+  Widget _buildTimeTools() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
           Expanded(
@@ -306,76 +391,84 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               onTap: _showTimeMonthlyAverage,
             ),
           ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _toolButton(
+              icon: Icons.history_rounded,
+              title: 'History',
+              onTap: () => _showHistory(isTime: true),
+            ),
+          ),
         ],
       ),
     );
   }
 
   // ============================================================
-  // NORMAL CALCULATOR
+  // NORMAL CALCULATOR UI
   // ============================================================
 
   Widget _buildNormalCalculator() {
     return Column(
+      key: const ValueKey('normal_calculator'),
       children: [
+        _buildNormalDisplay(),
+        _buildNormalTools(),
         Expanded(
-          child: _normalDisplay(),
+          child: _buildKeypad(
+            isTime: false,
+          ),
         ),
-        _normalQuickTools(),
-        _normalKeypad(),
       ],
     );
   }
 
-  Widget _normalDisplay() {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildNormalDisplay() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-      padding: const EdgeInsets.all(18),
-      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: dark
-            ? const Color(0xFF10291F)
-            : const Color(0xFFFFFCF5),
+        color: _displayColor,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0x44C9A45C),
+          color: gold.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          SingleChildScrollView(
-            controller: _normalExpressionScrollController,
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              _normalExpression.isEmpty
-                  ? '0'
-                  : _normalExpression,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withValues(alpha: 0.65),
+          SizedBox(
+            width: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _normalExpression.isEmpty
+                    ? '0'
+                    : _normalExpression,
+                maxLines: 1,
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              _normalResult,
-              maxLines: 1,
-              style: const TextStyle(
-                fontSize: 38,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFC9A45C),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _normalDisplayResult,
+                maxLines: 1,
+                style: TextStyle(
+                  color: gold,
+                  fontSize: 31,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -384,9 +477,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  Widget _normalQuickTools() {
+  // ============================================================
+  // NORMAL TOOLS
+  // ============================================================
+
+  Widget _buildNormalTools() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
           Expanded(
@@ -404,476 +501,409 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               onTap: _showNormalMonthlyAverage,
             ),
           ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _toolButton(
+              icon: Icons.history_rounded,
+              title: 'History',
+              onTap: () => _showHistory(isTime: false),
+            ),
+          ),
         ],
       ),
     );
   }
-
-  // ============================================================
-  // COMMON TOOL BUTTON
-  // ============================================================
 
   Widget _toolButton({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
   }) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(
-        icon,
-        size: 18,
-      ),
-      label: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        side: const BorderSide(
-          color: Color(0x55C9A45C),
-        ),
-        foregroundColor: const Color(0xFFC9A45C),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+    return Material(
+      color: _cardColor,
+      borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(13),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: 9,
+            horizontal: 4,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: gold.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 19,
+                color: gold,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: _textColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   // ============================================================
-  // NORMAL CALCULATOR LOGIC
+  // COMMON KEYPAD
   // ============================================================
 
-  void _addNormal(String value) {
+  Widget _buildKeypad({
+    required bool isTime,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _key(
+                  'C',
+                  type: _KeyType.clear,
+                  onTap: () {
+                    if (isTime) {
+                      _clearTime();
+                    } else {
+                      _clearNormal();
+                    }
+                  },
+                ),
+                _key(
+                  '⌫',
+                  type: _KeyType.delete,
+                  onTap: () {
+                    if (isTime) {
+                      _deleteTime();
+                    } else {
+                      _deleteNormal();
+                    }
+                  },
+                ),
+                _key(
+                  '÷',
+                  type: _KeyType.operator,
+                  onTap: () {
+                    if (isTime) {
+                      _addTimeOperator('÷');
+                    } else {
+                      _addNormalOperator('÷');
+                    }
+                  },
+                ),
+                _key(
+                  '×',
+                  type: _KeyType.operator,
+                  onTap: () {
+                    if (isTime) {
+                      _addTimeOperator('×');
+                    } else {
+                      _addNormalOperator('×');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                _key(
+                  '7',
+                  onTap: () => isTime
+                      ? _addTimeNumber('7')
+                      : _addNormalNumber('7'),
+                ),
+                _key(
+                  '8',
+                  onTap: () => isTime
+                      ? _addTimeNumber('8')
+                      : _addNormalNumber('8'),
+                ),
+                _key(
+                  '9',
+                  onTap: () => isTime
+                      ? _addTimeNumber('9')
+                      : _addNormalNumber('9'),
+                ),
+                _key(
+                  '-',
+                  type: _KeyType.operator,
+                  onTap: () {
+                    if (isTime) {
+                      _addTimeOperator('-');
+                    } else {
+                      _addNormalOperator('-');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                _key(
+                  '4',
+                  onTap: () => isTime
+                      ? _addTimeNumber('4')
+                      : _addNormalNumber('4'),
+                ),
+                _key(
+                  '5',
+                  onTap: () => isTime
+                      ? _addTimeNumber('5')
+                      : _addNormalNumber('5'),
+                ),
+                _key(
+                  '6',
+                  onTap: () => isTime
+                      ? _addTimeNumber('6')
+                      : _addNormalNumber('6'),
+                ),
+                _key(
+                  '+',
+                  type: _KeyType.operator,
+                  onTap: () {
+                    if (isTime) {
+                      _addTimeOperator('+');
+                    } else {
+                      _addNormalOperator('+');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                _key(
+                  '1',
+                  onTap: () => isTime
+                      ? _addTimeNumber('1')
+                      : _addNormalNumber('1'),
+                ),
+                _key(
+                  '2',
+                  onTap: () => isTime
+                      ? _addTimeNumber('2')
+                      : _addNormalNumber('2'),
+                ),
+                _key(
+                  '3',
+                  onTap: () => isTime
+                      ? _addTimeNumber('3')
+                      : _addNormalNumber('3'),
+                ),
+                _key(
+                  '=',
+                  type: _KeyType.equals,
+                  onTap: isTime
+                      ? _calculateTime
+                      : _calculateNormal,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                _key(
+                  '0',
+                  flex: 2,
+                  onTap: () => isTime
+                      ? _addTimeNumber('0')
+                      : _addNormalNumber('0'),
+                ),
+                _key(
+                  '.',
+                  onTap: () => isTime
+                      ? _addTimeNumber('.')
+                      : _addNormalNumber('.'),
+                ),
+                _key(
+                  '=',
+                  type: _KeyType.equals,
+                  onTap: isTime
+                      ? _calculateTime
+                      : _calculateNormal,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _key(
+    String text, {
+    required VoidCallback onTap,
+    _KeyType type = _KeyType.number,
+    int flex = 1,
+  }) {
+    Color textColor = _textColor;
+
+    if (type == _KeyType.operator) {
+      textColor = gold;
+    } else if (type == _KeyType.equals) {
+      textColor = Colors.white;
+    } else if (type == _KeyType.clear) {
+      textColor = Colors.redAccent;
+    } else if (type == _KeyType.delete) {
+      textColor = gold;
+    }
+
+    Color? background;
+
+    if (type == _KeyType.equals) {
+      background = green;
+    } else if (type == _KeyType.operator) {
+      background = _isDarkMode
+          ? const Color(0xFF1C4636)
+          : const Color(0xFFEDE7D9);
+    } else if (type == _KeyType.clear ||
+        type == _KeyType.delete) {
+      background = _isDarkMode
+          ? const Color(0xFF1A3B2E)
+          : const Color(0xFFF0EBDF);
+    } else {
+      background = _cardColor;
+    }
+
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Material(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Center(
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: text == '⌫' ? 23 : 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // TIME INPUT
+  // ============================================================
+
+  void _addTimeNumber(String value) {
     setState(() {
-      if (value == 'C') {
-        _normalExpression = '';
-        _normalResult = '0';
-        return;
-      }
-
-      if (value == '⌫') {
-        if (_normalExpression.isNotEmpty) {
-          _normalExpression = _normalExpression.substring(
-            0,
-            _normalExpression.length - 1,
-          );
-        }
-
-        _calculateNormalPreview();
-        return;
-      }
-
-      if (value == '=') {
-        _calculateNormalFinal();
-        return;
-      }
-
-      if (_isOperator(value)) {
-        if (_normalExpression.isEmpty) {
-          if (value == '-') {
-            _normalExpression = '-';
-          }
-        } else {
-          final last =
-              _normalExpression[_normalExpression.length - 1];
-
-          if (_isOperator(last)) {
-            _normalExpression =
-                _normalExpression.substring(
-                      0,
-                      _normalExpression.length - 1,
-                    ) +
-                    value;
-          } else {
-            _normalExpression += value;
-          }
-        }
-      } else if (value == '.') {
-        final currentNumber = _normalCurrentNumber();
-
-        if (!currentNumber.contains('.')) {
-          if (_normalExpression.isEmpty ||
-              _isOperator(
-                _normalExpression[
-                    _normalExpression.length - 1],
-              )) {
-            _normalExpression += '0.';
-          } else {
-            _normalExpression += '.';
-          }
-        }
-      } else {
-        _normalExpression += value;
-      }
-
-      _calculateNormalPreview();
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_normalExpressionScrollController.hasClients) {
-          _normalExpressionScrollController.jumpTo(
-            _normalExpressionScrollController
-                .position
-                .maxScrollExtent,
-          );
-        }
-      });
+      _timeExpression += value;
+      _updateTimePreview();
     });
   }
 
-  String _normalCurrentNumber() {
-    if (_normalExpression.isEmpty) return '';
-
-    int index = _normalExpression.length - 1;
-
-    while (
-        index >= 0 &&
-        !_isOperator(_normalExpression[index])) {
-      index--;
-    }
-
-    return _normalExpression.substring(index + 1);
-  }
-
-  List<String> _normalTokens(String expression) {
-    final result = <String>[];
-    String number = '';
-
-    for (int i = 0; i < expression.length; i++) {
-      final char = expression[i];
-
-      if (_isOperator(char)) {
-        if (number.isNotEmpty) {
-          result.add(number);
-          number = '';
-        }
-
-        result.add(char);
-      } else {
-        number += char;
+  void _addTimeOperator(String operator) {
+    if (_timeExpression.isEmpty) {
+      if (operator == '-') {
+        setState(() {
+          _timeExpression = '-';
+        });
       }
-    }
-
-    if (number.isNotEmpty) {
-      result.add(number);
-    }
-
-    return result;
-  }
-
-  double? _evaluateNormal(String expression) {
-    if (expression.isEmpty) return null;
-
-    final tokens = _normalTokens(expression);
-
-    if (tokens.isEmpty) return null;
-
-    if (_isOperator(tokens.last)) {
-      tokens.removeLast();
-    }
-
-    if (tokens.isEmpty) return null;
-
-    try {
-      final numbers = <double>[];
-      final operators = <String>[];
-
-      for (final token in tokens) {
-        if (_isOperator(token)) {
-          operators.add(token);
-        } else {
-          numbers.add(double.parse(token));
-        }
-      }
-
-      if (numbers.isEmpty) return null;
-
-      for (int i = 0; i < operators.length;) {
-        if (operators[i] == '×' ||
-            operators[i] == '÷') {
-          final left = numbers[i];
-          final right = numbers[i + 1];
-
-          double value;
-
-          if (operators[i] == '×') {
-            value = left * right;
-          } else {
-            if (right == 0) return null;
-            value = left / right;
-          }
-
-          numbers[i] = value;
-          numbers.removeAt(i + 1);
-          operators.removeAt(i);
-        } else {
-          i++;
-        }
-      }
-
-      double result = numbers[0];
-
-      for (int i = 0; i < operators.length; i++) {
-        if (operators[i] == '+') {
-          result += numbers[i + 1];
-        } else if (operators[i] == '-') {
-          result -= numbers[i + 1];
-        }
-      }
-
-      return result;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String _formatNumber(double value) {
-    if (value.isNaN || value.isInfinite) {
-      return 'Error';
-    }
-
-    if (value == value.roundToDouble()) {
-      return value.toInt().toString();
-    }
-
-    final text = value.toStringAsFixed(10);
-
-    return text
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
-  }
-
-  void _calculateNormalPreview() {
-    final value = _evaluateNormal(_normalExpression);
-
-    if (value != null) {
-      _normalResult = _formatNumber(value);
-    } else {
-      _normalResult = '0';
-    }
-  }
-
-  void _calculateNormalFinal() {
-    final value = _evaluateNormal(_normalExpression);
-
-    if (value == null) {
       return;
     }
 
-    final formatted = _formatNumber(value);
+    final last = _timeExpression[_timeExpression.length - 1];
 
-    if (_normalExpression.isNotEmpty) {
-      _normalHistory.insert(
-        0,
-        '$_normalExpression = $formatted',
-      );
-
-      if (_normalHistory.length > 30) {
-        _normalHistory.removeLast();
-      }
-    }
-
-    setState(() {
-      _normalResult = formatted;
-    });
-  }
-
-  // ============================================================
-  // NORMAL KEYPAD
-  // ============================================================
-
-  Widget _normalKeypad() {
-    final buttons = [
-      ['C', '⌫', '÷', '×'],
-      ['7', '8', '9', '-'],
-      ['4', '5', '6', '+'],
-      ['1', '2', '3', '='],
-      ['0', '.', '', ''],
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Column(
-        children: buttons.map((row) {
-          return Row(
-            children: row.map((value) {
-              if (value.isEmpty) {
-                return const Expanded(
-                  child: SizedBox(height: 58),
-                );
-              }
-
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: _normalButton(value),
-                ),
-              );
-            }).toList(),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _normalButton(String value) {
-    final operator = _isOperator(value);
-    final action =
-        value == 'C' || value == '⌫' || value == '=';
-
-    return SizedBox(
-      height: 56,
-      child: ElevatedButton(
-        onPressed: () => _addNormal(value),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: value == '='
-              ? const Color(0xFFC9A45C)
-              : operator
-                  ? const Color(0xFF176B45)
-                  : action
-                      ? const Color(0xFF294D3E)
-                      : Theme.of(context).brightness ==
-                              Brightness.dark
-                          ? const Color(0xFF10291F)
-                          : const Color(0xFFFFFCF5),
-          foregroundColor: value == '='
-              ? const Color(0xFF18352A)
-              : Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(17),
-            side: const BorderSide(
-              color: Color(0x33C9A45C),
-            ),
-          ),
-          padding: EdgeInsets.zero,
-        ),
-        child: Text(
-          value,
-          style: TextStyle(
-            fontSize: value == '⌫' ? 22 : 20,
-            fontWeight: FontWeight.w800,
-            color: value == '='
-                ? const Color(0xFF18352A)
-                : (!operator && !action)
-                    ? Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.color
-                    : Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // TIME CALCULATOR LOGIC
-  // ============================================================
-
-  void _addTime(String value) {
-    setState(() {
-      if (value == 'C') {
-        _timeExpression = '';
-        _timeResultMinutes = 0;
-        return;
-      }
-
-      if (value == '⌫') {
-        if (_timeExpression.isNotEmpty) {
-          _timeExpression = _timeExpression.substring(
-            0,
-            _timeExpression.length - 1,
-          );
-        }
-
-        _calculateTimePreview();
-        return;
-      }
-
-      if (value == '=') {
-        _calculateTimeFinal();
-        return;
-      }
-
-      if (_isOperator(value)) {
-        if (_timeExpression.isEmpty) {
-          if (value == '-') {
-            _timeExpression = '-';
-          }
-        } else {
-          final last =
-              _timeExpression[_timeExpression.length - 1];
-
-          if (_isOperator(last)) {
-            _timeExpression =
-                _timeExpression.substring(
-                      0,
-                      _timeExpression.length - 1,
-                    ) +
-                    value;
-          } else {
-            _timeExpression += value;
-          }
-        }
-      } else if (value == '.') {
-        final currentNumber = _timeCurrentNumber();
-
-        if (!currentNumber.contains('.')) {
-          if (_timeExpression.isEmpty ||
-              _isOperator(
-                _timeExpression[
-                    _timeExpression.length - 1],
-              )) {
-            _timeExpression += '0.';
-          } else {
-            _timeExpression += '.';
-          }
-        }
-      } else {
-        _timeExpression += value;
-      }
-
-      _calculateTimePreview();
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_timeExpressionScrollController.hasClients) {
-          _timeExpressionScrollController.jumpTo(
-            _timeExpressionScrollController
-                .position
-                .maxScrollExtent,
-          );
-        }
+    if ('+-×÷'.contains(last)) {
+      setState(() {
+        _timeExpression =
+            '${_timeExpression.substring(0, _timeExpression.length - 1)}$operator';
       });
+    } else {
+      setState(() {
+        _timeExpression += operator;
+      });
+    }
+  }
+
+  void _deleteTime() {
+    if (_timeExpression.isEmpty) return;
+
+    setState(() {
+      _timeExpression =
+          _timeExpression.substring(0, _timeExpression.length - 1);
+
+      if (_timeExpression.isEmpty) {
+        _timeDisplayResult = '0';
+      } else {
+        _updateTimePreview();
+      }
     });
   }
 
-  String _timeCurrentNumber() {
-    if (_timeExpression.isEmpty) return '';
-
-    int index = _timeExpression.length - 1;
-
-    while (
-        index >= 0 &&
-        !_isOperator(_timeExpression[index])) {
-      index--;
-    }
-
-    return _timeExpression.substring(index + 1);
+  void _clearTime() {
+    setState(() {
+      _timeExpression = '';
+      _timeDisplayResult = '0';
+      _lastTimeResultMinutes = null;
+    });
   }
 
+  // ============================================================
+  // TIME PARSER
+  // ============================================================
+
+  /// Time format:
+  ///
+  /// 1.20  = 1 hour 20 minutes
+  /// 2.30  = 2 hours 30 minutes
+  /// 200.20 = 200 hours 20 minutes
+  ///
+  /// IMPORTANT:
+  /// minute part 60-এর বেশি হলেও এখন আর invalid হবে না।
+  ///
+  /// 1.60 = 2 hours
+  /// 1.75 = 2 hours 15 minutes
+  /// 2.90 = 3 hours 30 minutes
+  ///
+  /// অর্থাৎ extra minute automatically hour-এ carry হবে।
   int? _parseTime(String value) {
     if (value.isEmpty || value == '-') {
       return null;
     }
 
     final negative = value.startsWith('-');
-    final clean = negative
-        ? value.substring(1)
-        : value;
+    final clean =
+        negative ? value.substring(1) : value;
+
+    if (clean.isEmpty) {
+      return null;
+    }
 
     try {
       if (clean.contains('.')) {
@@ -890,236 +920,207 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           minuteText = '0';
         }
 
+        // HH.MM format ধরে প্রথম 2 digit minute হিসেবে নেওয়া হচ্ছে।
+        if (minuteText.length > 2) {
+          minuteText = minuteText.substring(0, 2);
+        }
+
+        // আগের calculator-এর behavior বজায় রাখা:
+        // 1.6 -> 1.60 -> 2h
         if (minuteText.length == 1) {
           minuteText = '${minuteText}0';
         }
 
         final minutes = int.parse(minuteText);
 
-        if (minutes >= 60) {
+        // এখানে আর minutes >= 60 হলে null করা হচ্ছে না।
+        // 60-এর বেশি হলে total minutes-এর মাধ্যমে hour-এ carry হবে।
+        final totalMinutes =
+            (hours * 60) + minutes;
+
+        return negative
+            ? -totalMinutes
+            : totalMinutes;
+      }
+
+      final hours = int.parse(clean);
+      final totalMinutes = hours * 60;
+
+      return negative
+          ? -totalMinutes
+          : totalMinutes;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ============================================================
+  // TIME TOKENIZE
+  // ============================================================
+
+  List<String> _timeTokens(String expression) {
+    final normalized =
+        expression.replaceAll(' ', '');
+
+    final tokens = <String>[];
+    String number = '';
+
+    for (int i = 0; i < normalized.length; i++) {
+      final char = normalized[i];
+
+      if ('0123456789.'.contains(char)) {
+        number += char;
+      } else if ('+-×÷'.contains(char)) {
+        if (number.isNotEmpty) {
+          tokens.add(number);
+          number = '';
+        }
+
+        // Negative number support
+        if (char == '-' &&
+            (tokens.isEmpty ||
+                '+-×÷'.contains(tokens.last))) {
+          number = '-';
+        } else {
+          tokens.add(char);
+        }
+      }
+    }
+
+    if (number.isNotEmpty) {
+      tokens.add(number);
+    }
+
+    return tokens;
+  }
+
+  // ============================================================
+  // TIME EVALUATION
+  // ============================================================
+
+  int? _evaluateTime(String expression) {
+    final tokens = _timeTokens(expression);
+
+    if (tokens.isEmpty) {
+      return null;
+    }
+
+    final values = <int>[];
+    final operators = <String>[];
+
+    for (final token in tokens) {
+      if ('+-×÷'.contains(token)) {
+        operators.add(token);
+      } else {
+        final value = _parseTime(token);
+
+        if (value == null) {
           return null;
         }
 
-        final total = hours * 60 + minutes;
-
-        return negative ? -total : total;
+        values.add(value);
       }
+    }
 
-      return int.parse(clean) *
-          60 *
-          (negative ? -1 : 1);
-    } catch (_) {
+    if (values.isEmpty ||
+        values.length != operators.length + 1) {
       return null;
     }
-  }
 
-  int? _evaluateTime(String expression) {
-    if (expression.isEmpty) return null;
+    // First × and ÷
+    final newValues = <int>[];
+    final newOperators = <String>[];
 
-    final tokens = _normalTokens(expression);
+    int current = values[0];
 
-    if (tokens.isEmpty) return null;
+    for (int i = 0; i < operators.length; i++) {
+      final operator = operators[i];
+      final next = values[i + 1];
 
-    if (_isOperator(tokens.last)) {
-      tokens.removeLast();
+      if (operator == '×') {
+        current = current * next;
+      } else if (operator == '÷') {
+        if (next == 0) {
+          return null;
+        }
+
+        current = current ~/ next;
+      } else {
+        newValues.add(current);
+        newOperators.add(operator);
+        current = next;
+      }
     }
 
-    if (tokens.isEmpty) return null;
+    newValues.add(current);
 
-    try {
-      final numbers = <int>[];
-      final operators = <String>[];
+    // Then + and -
+    int result = newValues[0];
 
-      for (final token in tokens) {
-        if (_isOperator(token)) {
-          operators.add(token);
-        } else {
-          final value = _parseTime(token);
-
-          if (value == null) {
-            return null;
-          }
-
-          numbers.add(value);
-        }
+    for (int i = 0; i < newOperators.length; i++) {
+      if (newOperators[i] == '+') {
+        result += newValues[i + 1];
+      } else if (newOperators[i] == '-') {
+        result -= newValues[i + 1];
       }
-
-      if (numbers.isEmpty) return null;
-
-      for (int i = 0; i < operators.length;) {
-        if (operators[i] == '×' ||
-            operators[i] == '÷') {
-          final left = numbers[i];
-          final right = numbers[i + 1];
-
-          int value;
-
-          if (operators[i] == '×') {
-            value = left * right;
-          } else {
-            if (right == 0) return null;
-            value = left ~/ right;
-          }
-
-          numbers[i] = value;
-          numbers.removeAt(i + 1);
-          operators.removeAt(i);
-        } else {
-          i++;
-        }
-      }
-
-      int result = numbers[0];
-
-      for (int i = 0; i < operators.length; i++) {
-        if (operators[i] == '+') {
-          result += numbers[i + 1];
-        } else if (operators[i] == '-') {
-          result -= numbers[i + 1];
-        }
-      }
-
-      return result;
-    } catch (_) {
-      return null;
     }
+
+    return result;
   }
 
-  void _calculateTimePreview() {
-    final value = _evaluateTime(_timeExpression);
+  // ============================================================
+  // TIME PREVIEW
+  // ============================================================
 
-    if (value != null) {
-      _timeResultMinutes = value;
+  void _updateTimePreview() {
+    final result = _evaluateTime(_timeExpression);
+
+    if (result == null) {
+      _timeDisplayResult = '0';
     } else {
-      _timeResultMinutes = 0;
+      _timeDisplayResult = _formatTime(result);
     }
   }
 
-  void _calculateTimeFinal() {
-    final value = _evaluateTime(_timeExpression);
+  // ============================================================
+  // TIME CALCULATE
+  // ============================================================
 
-    if (value == null) {
+  Future<void> _calculateTime() async {
+    if (_timeExpression.isEmpty) return;
+
+    final result = _evaluateTime(_timeExpression);
+
+    if (result == null) {
+      setState(() {
+        _timeDisplayResult = '0';
+      });
+
+      _showMessage('সঠিক সময়ের হিসাব দিন।');
       return;
     }
 
-    if (_timeExpression.isNotEmpty) {
-      _timeHistory.insert(
-        0,
-        '$_timeExpression = ${_formatTime(value)}',
-      );
-
-      if (_timeHistory.length > 30) {
-        _timeHistory.removeLast();
-      }
-    }
+    final formatted = _formatTime(result);
 
     setState(() {
-      _timeResultMinutes = value;
+      _timeDisplayResult = formatted;
+      _lastTimeResultMinutes = result;
     });
+
+    final historyText =
+        '$_timeExpression = $formatted';
+
+    _timeHistory.insert(0, historyText);
+
+    if (_timeHistory.length > 30) {
+      _timeHistory = _timeHistory.take(30).toList();
+    }
+
+    await _saveTimeHistory();
   }
 
   // ============================================================
-  // TIME KEYPAD
-  // ============================================================
-
-  Widget _timeKeypad() {
-    final buttons = [
-      ['C', '⌫', '÷', '×'],
-      ['7', '8', '9', '-'],
-      ['4', '5', '6', '+'],
-      ['1', '2', '3', '='],
-      ['0', '.', '', ''],
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Column(
-        children: buttons.map((row) {
-          return Row(
-            children: row.map((value) {
-              if (value.isEmpty) {
-                return const Expanded(
-                  child: SizedBox(height: 58),
-                );
-              }
-
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: _timeButton(value),
-                ),
-              );
-            }).toList(),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _timeButton(String value) {
-    final operator = _isOperator(value);
-    final action =
-        value == 'C' || value == '⌫' || value == '=';
-
-    return SizedBox(
-      height: 56,
-      child: ElevatedButton(
-        onPressed: () => _addTime(value),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: value == '='
-              ? const Color(0xFFC9A45C)
-              : operator
-                  ? const Color(0xFF176B45)
-                  : action
-                      ? const Color(0xFF294D3E)
-                      : Theme.of(context).brightness ==
-                              Brightness.dark
-                          ? const Color(0xFF10291F)
-                          : const Color(0xFFFFFCF5),
-          foregroundColor: value == '='
-              ? const Color(0xFF18352A)
-              : Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(17),
-            side: const BorderSide(
-              color: Color(0x33C9A45C),
-            ),
-          ),
-          padding: EdgeInsets.zero,
-        ),
-        child: Text(
-          value,
-          style: TextStyle(
-            fontSize: value == '⌫' ? 22 : 20,
-            fontWeight: FontWeight.w800,
-            color: value == '='
-                ? const Color(0xFF18352A)
-                : (!operator && !action)
-                    ? Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.color
-                    : Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // OPERATOR
-  // ============================================================
-
-  bool _isOperator(String value) {
-    return value == '+' ||
-        value == '-' ||
-        value == '×' ||
-        value == '÷';
-  }
-
-  // ============================================================
-  // TIME FORMATTING
+  // TIME FORMAT
   // ============================================================
 
   String _formatTime(int totalMinutes) {
@@ -1129,7 +1130,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     final hours = absolute ~/ 60;
     final minutes = absolute % 60;
 
-    final result = '$hours ঘণ্টা $minutes মিনিট';
+    String result;
+
+    if (hours == 0) {
+      result = '$minutes মিনিট';
+    } else if (minutes == 0) {
+      result = '$hours ঘণ্টা';
+    } else {
+      result = '$hours ঘণ্টা $minutes মিনিট';
+    }
 
     return negative ? '-$result' : result;
   }
@@ -1142,275 +1151,111 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     final minutes = absolute % 60;
 
     final result =
-        '${hours.toString()}.${minutes.toString().padLeft(2, '0')}';
+        '${hours}h ${minutes.toString().padLeft(2, '0')}m';
 
     return negative ? '-$result' : result;
   }
 
   // ============================================================
-  // TIME AVERAGE
+  // TIME DAILY AVERAGE
   // ============================================================
 
   void _showTimeDailyAverage() {
-    if (_timeExpression.isEmpty) {
-      _showMessage(
-        'আগে Time Calculator-এ একটি হিসাব করুন।',
-      );
-      return;
-    }
-
-    final value = _evaluateTime(_timeExpression);
-
-    if (value == null) {
-      _showMessage(
-        'আগে একটি সঠিক Time Calculation করুন।',
-      );
+    if (_lastTimeResultMinutes == null) {
+      _showMessage('আগে একটি Time calculation করুন।');
       return;
     }
 
     _showDaysDialog(
       title: 'দৈনিক গড়',
-      totalMinutes: value,
-      defaultDays: 1,
+      totalMinutes: _lastTimeResultMinutes!,
+      monthly: false,
     );
   }
+
+  // ============================================================
+  // TIME MONTHLY AVERAGE
+  // ============================================================
 
   void _showTimeMonthlyAverage() {
-    if (_timeExpression.isEmpty) {
-      _showMessage(
-        'আগে Time Calculator-এ একটি হিসাব করুন।',
-      );
-      return;
-    }
-
-    final value = _evaluateTime(_timeExpression);
-
-    if (value == null) {
-      _showMessage(
-        'আগে একটি সঠিক Time Calculation করুন।',
-      );
+    if (_lastTimeResultMinutes == null) {
+      _showMessage('আগে একটি Time calculation করুন।');
       return;
     }
 
     _showDaysDialog(
       title: 'মাসিক গড়',
-      totalMinutes: value,
-      defaultDays: 30,
+      totalMinutes: _lastTimeResultMinutes!,
+      monthly: true,
     );
   }
 
   // ============================================================
-  // NORMAL AVERAGE
-  // ============================================================
-
-  void _showNormalDailyAverage() {
-    if (_normalExpression.isEmpty) {
-      _showMessage(
-        'আগে Normal Calculator-এ একটি হিসাব করুন।',
-      );
-      return;
-    }
-
-    final value = _evaluateNormal(_normalExpression);
-
-    if (value == null) {
-      _showMessage(
-        'আগে একটি সঠিক Normal Calculation করুন।',
-      );
-      return;
-    }
-
-    _showNumberDaysDialog(
-      title: 'দৈনিক গড়',
-      totalValue: value,
-      defaultDays: 1,
-    );
-  }
-
-  void _showNormalMonthlyAverage() {
-    if (_normalExpression.isEmpty) {
-      _showMessage(
-        'আগে Normal Calculator-এ একটি হিসাব করুন।',
-      );
-      return;
-    }
-
-    final value = _evaluateNormal(_normalExpression);
-
-    if (value == null) {
-      _showMessage(
-        'আগে একটি সঠিক Normal Calculation করুন।',
-      );
-      return;
-    }
-
-    _showNumberDaysDialog(
-      title: 'মাসিক গড়',
-      totalValue: value,
-      defaultDays: 30,
-    );
-  }
-
-  // ============================================================
-  // TIME DAYS DIALOG
+  // TIME AVERAGE DAYS DIALOG
   // ============================================================
 
   void _showDaysDialog({
     required String title,
     required int totalMinutes,
-    required int defaultDays,
+    required bool monthly,
   }) {
-    final controller = TextEditingController(
-      text: defaultDays.toString(),
-    );
+    final controller = TextEditingController();
 
-    showDialog<void>(
+    showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'কত দিনের হিসাব?',
-              hintText: 'উদাহরণ: 5',
-              border: OutlineInputBorder(),
+          backgroundColor: _cardColor,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: _textColor,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('বাতিল'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final days =
-                    int.tryParse(controller.text.trim());
-
-                if (days == null || days <= 0) {
-                  return;
-                }
-
-                final average = totalMinutes ~/ days;
-
-                Navigator.pop(dialogContext);
-
-                _showResultDialog(
-                  title: title,
-                  result: _formatTime(average),
-                  extra:
-                      'মোট সময়: ${_formatTime(totalMinutes)}\n'
-                      'দিন: $days',
-                );
-              },
-              child: const Text('হিসাব'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // NORMAL DAYS DIALOG
-  // ============================================================
-
-  void _showNumberDaysDialog({
-    required String title,
-    required double totalValue,
-    required int defaultDays,
-  }) {
-    final controller = TextEditingController(
-      text: defaultDays.toString(),
-    );
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'কত দিনের হিসাব?',
-              hintText: 'উদাহরণ: 5',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('বাতিল'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final days =
-                    int.tryParse(controller.text.trim());
-
-                if (days == null || days <= 0) {
-                  return;
-                }
-
-                final average = totalValue / days;
-
-                Navigator.pop(dialogContext);
-
-                _showResultDialog(
-                  title: title,
-                  result: _formatNumber(average),
-                  extra:
-                      'মোট: ${_formatNumber(totalValue)}\n'
-                      'দিন: $days',
-                );
-              },
-              child: const Text('হিসাব'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // RESULT DIALOG
-  // ============================================================
-
-  void _showResultDialog({
-    required String title,
-    required String result,
-    required String extra,
-  }) {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                result,
-                style: const TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFFC9A45C),
+                'সর্বশেষ হিসাব: ${_formatTime(totalMinutes)}',
+                style: TextStyle(
+                  color: gold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Text(
-                extra,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.6,
+                'কত দিনের হিসাব?',
+                style: TextStyle(
+                  color: _textColor,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(
+                  color: _textColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: monthly
+                      ? 'যেমন: 30'
+                      : 'যেমন: 5',
+                  hintStyle: TextStyle(
+                    color: _secondaryTextColor,
+                  ),
+                  suffixText: 'দিন',
+                  suffixStyle: TextStyle(
+                    color: gold,
+                  ),
+                  filled: true,
+                  fillColor: _displayColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -1418,11 +1263,731 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
-              child: const Text('ঠিক আছে'),
+              child: Text(
+                'বাতিল',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final days =
+                    int.tryParse(controller.text.trim());
+
+                if (days == null || days <= 0) {
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+
+                final average =
+                    totalMinutes / days;
+
+                _showTimeAverageResult(
+                  title: title,
+                  averageMinutes: average,
+                  days: days,
+                );
+              },
+              child: const Text('হিসাব করুন'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showTimeAverageResult({
+    required String title,
+    required double averageMinutes,
+    required int days,
+  }) {
+    final roundedMinutes =
+        averageMinutes.round();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _cardColor,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: _textColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'প্রতি দিন',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _formatTime(roundedMinutes),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: gold,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$days দিনের গড়',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: Text(
+                'ঠিক আছে',
+                style: TextStyle(
+                  color: gold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // NORMAL INPUT
+  // ============================================================
+
+  void _addNormalNumber(String value) {
+    setState(() {
+      _normalExpression += value;
+      _updateNormalPreview();
+    });
+  }
+
+  void _addNormalOperator(String operator) {
+    if (_normalExpression.isEmpty) {
+      if (operator == '-') {
+        setState(() {
+          _normalExpression = '-';
+        });
+      }
+      return;
+    }
+
+    final last =
+        _normalExpression[_normalExpression.length - 1];
+
+    if ('+-×÷'.contains(last)) {
+      setState(() {
+        _normalExpression =
+            '${_normalExpression.substring(0, _normalExpression.length - 1)}$operator';
+      });
+    } else {
+      setState(() {
+        _normalExpression += operator;
+      });
+    }
+  }
+
+  void _deleteNormal() {
+    if (_normalExpression.isEmpty) return;
+
+    setState(() {
+      _normalExpression =
+          _normalExpression.substring(
+        0,
+        _normalExpression.length - 1,
+      );
+
+      if (_normalExpression.isEmpty) {
+        _normalDisplayResult = '0';
+      } else {
+        _updateNormalPreview();
+      }
+    });
+  }
+
+  void _clearNormal() {
+    setState(() {
+      _normalExpression = '';
+      _normalDisplayResult = '0';
+      _lastNormalResult = null;
+    });
+  }
+
+  // ============================================================
+  // NORMAL TOKENIZE
+  // ============================================================
+
+  List<String> _normalTokens(String expression) {
+    final normalized =
+        expression.replaceAll(' ', '');
+
+    final tokens = <String>[];
+    String number = '';
+
+    for (int i = 0; i < normalized.length; i++) {
+      final char = normalized[i];
+
+      if ('0123456789.'.contains(char)) {
+        number += char;
+      } else if ('+-×÷'.contains(char)) {
+        if (number.isNotEmpty) {
+          tokens.add(number);
+          number = '';
+        }
+
+        if (char == '-' &&
+            (tokens.isEmpty ||
+                '+-×÷'.contains(tokens.last))) {
+          number = '-';
+        } else {
+          tokens.add(char);
+        }
+      }
+    }
+
+    if (number.isNotEmpty) {
+      tokens.add(number);
+    }
+
+    return tokens;
+  }
+
+  // ============================================================
+  // NORMAL EVALUATION
+  // ============================================================
+
+  double? _evaluateNormal(String expression) {
+    final tokens = _normalTokens(expression);
+
+    if (tokens.isEmpty) {
+      return null;
+    }
+
+    final values = <double>[];
+    final operators = <String>[];
+
+    for (final token in tokens) {
+      if ('+-×÷'.contains(token)) {
+        operators.add(token);
+      } else {
+        final value = double.tryParse(token);
+
+        if (value == null) {
+          return null;
+        }
+
+        values.add(value);
+      }
+    }
+
+    if (values.isEmpty ||
+        values.length != operators.length + 1) {
+      return null;
+    }
+
+    final newValues = <double>[];
+    final newOperators = <String>[];
+
+    double current = values[0];
+
+    for (int i = 0; i < operators.length; i++) {
+      final operator = operators[i];
+      final next = values[i + 1];
+
+      if (operator == '×') {
+        current *= next;
+      } else if (operator == '÷') {
+        if (next == 0) {
+          return null;
+        }
+
+        current /= next;
+      } else {
+        newValues.add(current);
+        newOperators.add(operator);
+        current = next;
+      }
+    }
+
+    newValues.add(current);
+
+    double result = newValues[0];
+
+    for (int i = 0; i < newOperators.length; i++) {
+      if (newOperators[i] == '+') {
+        result += newValues[i + 1];
+      } else if (newOperators[i] == '-') {
+        result -= newValues[i + 1];
+      }
+    }
+
+    return result;
+  }
+
+  // ============================================================
+  // NORMAL PREVIEW
+  // ============================================================
+
+  void _updateNormalPreview() {
+    final result =
+        _evaluateNormal(_normalExpression);
+
+    if (result == null) {
+      _normalDisplayResult = '0';
+    } else {
+      _normalDisplayResult =
+          _formatNumber(result);
+    }
+  }
+
+  // ============================================================
+  // NORMAL CALCULATE
+  // ============================================================
+
+  Future<void> _calculateNormal() async {
+    if (_normalExpression.isEmpty) return;
+
+    final result =
+        _evaluateNormal(_normalExpression);
+
+    if (result == null) {
+      setState(() {
+        _normalDisplayResult = '0';
+      });
+
+      _showMessage('সঠিক হিসাব দিন।');
+      return;
+    }
+
+    final formatted =
+        _formatNumber(result);
+
+    setState(() {
+      _normalDisplayResult = formatted;
+      _lastNormalResult = result;
+    });
+
+    final historyText =
+        '$_normalExpression = $formatted';
+
+    _normalHistory.insert(0, historyText);
+
+    if (_normalHistory.length > 30) {
+      _normalHistory =
+          _normalHistory.take(30).toList();
+    }
+
+    await _saveNormalHistory();
+  }
+
+  // ============================================================
+  // NUMBER FORMAT
+  // ============================================================
+
+  String _formatNumber(double number) {
+    if (number.isNaN || number.isInfinite) {
+      return '0';
+    }
+
+    if (number == number.roundToDouble()) {
+      return number.toInt().toString();
+    }
+
+    return number
+        .toStringAsFixed(10)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  // ============================================================
+  // NORMAL DAILY AVERAGE
+  // ============================================================
+
+  void _showNormalDailyAverage() {
+    if (_lastNormalResult == null) {
+      _showMessage('আগে একটি Normal calculation করুন।');
+      return;
+    }
+
+    _showNormalDaysDialog(
+      title: 'দৈনিক গড়',
+      totalValue: _lastNormalResult!,
+    );
+  }
+
+  // ============================================================
+  // NORMAL MONTHLY AVERAGE
+  // ============================================================
+
+  void _showNormalMonthlyAverage() {
+    if (_lastNormalResult == null) {
+      _showMessage('আগে একটি Normal calculation করুন।');
+      return;
+    }
+
+    _showNormalDaysDialog(
+      title: 'মাসিক গড়',
+      totalValue: _lastNormalResult!,
+    );
+  }
+
+  // ============================================================
+  // NORMAL AVERAGE DAYS DIALOG
+  // ============================================================
+
+  void _showNormalDaysDialog({
+    required String title,
+    required double totalValue,
+  }) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _cardColor,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: _textColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'সর্বশেষ হিসাব: ${_formatNumber(totalValue)}',
+                style: TextStyle(
+                  color: gold,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'কত দিনের হিসাব?',
+                style: TextStyle(
+                  color: _textColor,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(
+                  color: _textColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'যেমন: 5',
+                  hintStyle: TextStyle(
+                    color: _secondaryTextColor,
+                  ),
+                  suffixText: 'দিন',
+                  suffixStyle: TextStyle(
+                    color: gold,
+                  ),
+                  filled: true,
+                  fillColor: _displayColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: Text(
+                'বাতিল',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final days =
+                    int.tryParse(controller.text.trim());
+
+                if (days == null || days <= 0) {
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+
+                final average =
+                    totalValue / days;
+
+                _showNormalAverageResult(
+                  title: title,
+                  average: average,
+                  days: days,
+                );
+              },
+              child: const Text('হিসাব করুন'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showNormalAverageResult({
+    required String title,
+    required double average,
+    required int days,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _cardColor,
+          title: Text(
+            title,
+            style: TextStyle(
+              color: _textColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'প্রতি দিন',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _formatNumber(average),
+                style: TextStyle(
+                  color: gold,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$days দিনের গড়',
+                style: TextStyle(
+                  color: _secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: Text(
+                'ঠিক আছে',
+                style: TextStyle(
+                  color: gold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // HISTORY
+  // ============================================================
+
+  void _showHistory({
+    required bool isTime,
+  }) {
+    final history =
+        isTime ? _timeHistory : _normalHistory;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(22),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.72,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _secondaryTextColor.withValues(
+                      alpha: 0.4,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        color: gold,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isTime
+                              ? 'Time Calculator History'
+                              : 'Normal Calculator History',
+                          style: TextStyle(
+                            color: _textColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (history.isNotEmpty)
+                        IconButton(
+                          onPressed: () async {
+                            if (isTime) {
+                              setState(() {
+                                _timeHistory.clear();
+                              });
+                              await _saveTimeHistory();
+                            } else {
+                              setState(() {
+                                _normalHistory.clear();
+                              });
+                              await _saveNormalHistory();
+                            }
+
+                            if (sheetContext.mounted) {
+                              Navigator.pop(sheetContext);
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                Expanded(
+                  child: history.isEmpty
+                      ? Center(
+                          child: Text(
+                            'কোনো history নেই',
+                            style: TextStyle(
+                              color: _secondaryTextColor,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding:
+                              const EdgeInsets.all(12),
+                          itemCount: history.length,
+                          separatorBuilder:
+                              (_, __) =>
+                                  const SizedBox(height: 8),
+                          itemBuilder:
+                              (itemContext, index) {
+                            return Container(
+                              padding:
+                                  const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: _cardColor,
+                                borderRadius:
+                                    BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: gold.withValues(
+                                    alpha: 0.18,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration:
+                                        BoxDecoration(
+                                      color:
+                                          green.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: TextStyle(
+                                          color: gold,
+                                          fontWeight:
+                                              FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      history[index],
+                                      style: TextStyle(
+                                        color: _textColor,
+                                        fontSize: 15,
+                                        fontWeight:
+                                            FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -1433,118 +1998,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   // ============================================================
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  // ============================================================
-  // NORMAL HISTORY
-  // ============================================================
-
-  void _showNormalHistory() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              8,
-              16,
-              20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Calculation History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _normalHistory.length,
-                    itemBuilder: (_, index) {
-                      return ListTile(
-                        leading: const Icon(
-                          Icons.history_rounded,
-                          color: Color(0xFFC9A45C),
-                        ),
-                        title: Text(
-                          _normalHistory[index],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // TIME HISTORY
-  // ============================================================
-
-  void _showTimeHistory() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              8,
-              16,
-              20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Time Calculation History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _timeHistory.length,
-                    itemBuilder: (_, index) {
-                      return ListTile(
-                        leading: const Icon(
-                          Icons.history_rounded,
-                          color: Color(0xFFC9A45C),
-                        ),
-                        title: Text(
-                          _timeHistory[index],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: darkGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   // ============================================================
@@ -1553,8 +2015,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   void dispose() {
-    _timeExpressionScrollController.dispose();
-    _normalExpressionScrollController.dispose();
     super.dispose();
   }
+}
+
+// ================================================================
+// KEY TYPE
+// ================================================================
+
+enum _KeyType {
+  number,
+  operator,
+  equals,
+  clear,
+  delete,
 }
