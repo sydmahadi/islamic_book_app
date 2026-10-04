@@ -18,58 +18,44 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFC9A45C),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.auto_stories_rounded,
-                color: dark ? const Color(0xFF071C14) : Colors.white,
-                size: 23,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text('ইসলামিক বই'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: isDarkMode ? 'Light Mode' : 'Dark Mode',
-            onPressed: onToggleTheme,
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: Icon(
-                isDarkMode
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-                key: ValueKey(isDarkMode),
-                color: const Color(0xFFC9A45C),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
           children: [
-            _heroSection(context),
+            // Dark / Light Theme Button
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0x22176B45)
+                      : const Color(0x14C9A45C),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0x44C9A45C),
+                  ),
+                ),
+                child: IconButton(
+                  tooltip: isDarkMode ? 'Light Mode' : 'Dark Mode',
+                  onPressed: onToggleTheme,
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      isDarkMode
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      key: ValueKey(isDarkMode),
+                      color: const Color(0xFFC9A45C),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
+            // বইয়ের সংগ্রহ
             _sectionTitle(
               context,
               icon: Icons.menu_book_rounded,
@@ -79,6 +65,7 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // Category 01
             _categoryCard(
               context,
               icon: Icons.edit_document,
@@ -88,6 +75,7 @@ class HomeScreen extends StatelessWidget {
               number: '০১',
             ),
 
+            // Category 02
             _categoryCard(
               context,
               icon: Icons.quiz_rounded,
@@ -97,6 +85,7 @@ class HomeScreen extends StatelessWidget {
               number: '০২',
             ),
 
+            // Category 03
             _categoryCard(
               context,
               icon: Icons.workspace_premium_rounded,
@@ -108,10 +97,12 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
+            // বিশেষ বই
             _specialBookCard(context),
 
             const SizedBox(height: 28),
 
+            // প্রয়োজনীয় টুল
             _sectionTitle(
               context,
               icon: Icons.calculate_rounded,
@@ -121,169 +112,19 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // Calculator
             _calculatorCard(context),
 
             const SizedBox(height: 28),
 
+            // About
             _aboutCard(context),
 
             const SizedBox(height: 24),
 
+            // Footer
             _footer(context),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _heroSection(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [
-                  Color(0xFF176B45),
-                  Color(0xFF0B3826),
-                  Color(0xFF071C14),
-                ]
-              : const [
-                  Color(0xFF176B45),
-                  Color(0xFF0F5132),
-                  Color(0xFF0A3C27),
-                ],
-        ),
-        border: Border.all(
-          color: const Color(0x66C9A45C),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: dark ? 0.28 : 0.12,
-            ),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            top: -35,
-            child: _decorativeCircle(130),
-          ),
-          Positioned(
-            right: 45,
-            bottom: -70,
-            child: _decorativeCircle(110),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(11),
-                    decoration: BoxDecoration(
-                      color: const Color(0x22FFFFFF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0x55C9A45C),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.nightlight_round,
-                      color: Color(0xFFE3C875),
-                      size: 25,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'بِسْمِ اللَّهِ',
-                    style: TextStyle(
-                      color: Color(0xFFE8D49A),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              const Text(
-                'ইসলামিক বই',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'জ্ঞান, চিন্তা ও আত্মগঠনের\nজন্য একটি সুন্দর পাঠভাণ্ডার',
-                style: TextStyle(
-                  color: Color(0xD9FFFFFF),
-                  fontSize: 15,
-                  height: 1.55,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0x22FFFFFF),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0x44C9A45C),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.offline_bolt_rounded,
-                      color: Color(0xFFE3C875),
-                      size: 18,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Download করে Offline-এ পড়ুন',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _decorativeCircle(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0x18C9A45C),
-          width: 18,
         ),
       ),
     );
