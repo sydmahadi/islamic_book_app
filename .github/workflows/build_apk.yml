@@ -27,8 +27,23 @@ jobs:
       - name: Generate Android Project
         run: flutter create --platforms=android --project-name islamic_book_app .
 
-      # Make sure Android app has Internet permission.
-      - name: Ensure Internet Permission
+      # Find logo.png anywhere in the repository.
+      - name: Find App Logo
+        shell: bash
+        run: |
+          LOGO_PATH=$(find . -type f -name "logo.png" -not -path "./.git/*" | head -n 1)
+
+          if [ -z "$LOGO_PATH" ]; then
+            echo "ERROR: logo.png was not found in the repository!"
+            echo "Please upload logo.png to the repository."
+            exit 1
+          fi
+
+          echo "Logo found at: $LOGO_PATH"
+          cp "$LOGO_PATH" ./logo.png
+
+      # Set the application name and Internet permission.
+      - name: Configure Android App
         shell: bash
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
@@ -38,13 +53,43 @@ jobs:
             exit 1
           fi
 
+          # Set launcher application name.
+          sed -i 's/android:label="[^"]*"/android:label="সদস্য সিলেবাসের বই"/' "$MANIFEST"
+
+          # Add Internet permission if it does not already exist.
           if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
             sed -i '/<manifest/a\
               <uses-permission android:name="android.permission.INTERNET"/>' "$MANIFEST"
           fi
 
+          echo "Application name:"
+          grep 'android:label=' "$MANIFEST"
+
           echo "Internet permission:"
           grep 'android.permission.INTERNET' "$MANIFEST"
+
+      # Install launcher icon generator.
+      - name: Add Launcher Icon Package
+        run: flutter pub add --dev flutter_launcher_icons
+
+      # Create launcher icon configuration.
+      - name: Create Launcher Icon Config
+        shell: bash
+        run: |
+          cat > flutter_launcher_icons.yaml <<'EOF'
+          flutter_launcher_icons:
+            android: true
+            ios: false
+            image_path: "logo.png"
+            min_sdk_android: 21
+          EOF
+
+          echo "Launcher icon configuration:"
+          cat flutter_launcher_icons.yaml
+
+      # Generate Android launcher icons from logo.png.
+      - name: Generate App Icon
+        run: dart run flutter_launcher_icons
 
       - name: Flutter Pub Get
         run: flutter pub get
@@ -58,5 +103,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: islamic-book-app
+          name: সদস্য সিলেবাসের বই 
           path: build/app/outputs/flutter-apk/app-release.apk
