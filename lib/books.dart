@@ -64,5 +64,5 @@ const List<Book> books = [
 const Book renaissanceBook = Book(
   title: 'রেনেসাঁর ডাক',
   category: 'রেনেসাঁর ডাক',
-  driveUrl: 'PASTE_RENAISSANCE_GOOGLE_DRIVE_LINK_HERE',
+  driveUrl: 'https://drive.google.com/file/d/1Xwyll8lkB4J5RbWBMGXxE1_RNsM6vceq/view?usp=drivesdk',
 );
